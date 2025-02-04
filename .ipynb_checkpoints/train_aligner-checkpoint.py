@@ -21,7 +21,7 @@ from src.aligner import *
 
     
 class AlignerLoss(nn.Module):
-    def __init__(self, id_encoder, disc, w_rec=30, w_perc_vgg=1e-2, w_perc_id=2e-3, w_perc_disc=10, w_id=1e-2, w_adv=0.1, w_mask=1, w_emotion=1, w_kpt=30, w_gaze=1):
+    def __init__(self, id_encoder, gaze_start, disc, w_rec=30, w_perc_vgg=1e-2, w_perc_id=2e-3, w_perc_disc=10, w_id=1e-2, w_adv=0.1, w_mask=1, w_emotion=1, w_kpt=30, w_gaze=1):
         super(AlignerLoss, self).__init__()
         self.perc_vgg_loss = PerceptualLoss(1, './weights/')
         self.id_loss = ArcFaceLoss(id_encoder)
@@ -30,8 +30,10 @@ class AlignerLoss(nn.Module):
         self.mask_loss = DiceLoss()
         self.emotion_loss = EmotionLoss()
         self.keypoint_loss = KeypointLoss(mode='expr')
+        self.gaze_start = gaze_start
+        self.gaze = GazeLossRTGene(device='cuda', gaze_model_types=['vgg16'])
 
-        self.weights = [w_rec, w_perc_vgg, w_perc_id, w_perc_disc, w_id, w_adv, w_mask, w_emotion, w_kpt]
+        self.weights = [w_rec, w_perc_vgg, w_perc_id, w_perc_disc, w_id, w_adv, w_mask, w_emotion, w_kpt, w_gaze]
 
         
     def forward(self, data_dict, X_dict, epoch):
@@ -73,15 +75,34 @@ class AlignerLoss(nn.Module):
             L_kpt = self.keypoint_loss(masked_fake, masked_target)
 
 
-        
-        if epoch > 0:
-            L_G = sum(
-                    L * w for L, w
-                    in zip((L_rec, L_perc_vgg, L_perc_id, L_perc_disc, L_id, L_adv_G, L_mask, L_emotion, L_kpt), self.weights))
-        else:
+        if epoch >= self.gaze_start:
+            try:
+                L_gaze = self.gaze(masked_fake[:, [2, 1, 0], :, :], masked_target[:, [2, 1, 0], :, :],
+                                                            X_dict['target']['keypoints'])
+                if L_gaze.shape != torch.Size([]):
+                    print('gaze_loss returned list: ', L_gaze)
+                    L_gaze = L_adv_G * 0
+                    
+            except Exception as e:
+                print(e)
+                print('error in gaze')
+                L_gaze = L_adv_G * 0
+
+
+        if epoch == 0:
             L_G = sum(
                         L * w for L, w
-                        in zip((L_rec, L_perc_vgg, L_perc_id, L_perc_disc, L_id, L_adv_G, L_mask, L_emotion), self.weights[:-1]))
+                        in zip((L_rec, L_perc_vgg, L_perc_id, L_perc_disc, L_id, L_adv_G, L_mask, L_emotion), self.weights[:-2]))
+        elif epoch > 0 and epoch < self.gaze_start:
+            L_G = sum(
+                    L * w for L, w
+                    in zip((L_rec, L_perc_vgg, L_perc_id, L_perc_disc, L_id, L_adv_G, L_mask, L_emotion, L_kpt), self.weights[:-1]))
+        else:
+            L_G = sum(
+                    L * w for L, w
+                    in zip((L_rec, L_perc_vgg, L_perc_id, L_perc_disc, L_id, L_adv_G, L_mask, L_emotion, L_kpt, L_gaze), self.weights))
+            
+            
         L_D = L_adv_D 
 
         
@@ -115,6 +136,7 @@ class AlignerModule(pl.LightningModule):
         self.aligner_loss = AlignerLoss(
             id_encoder=self.embedder.id_encoder,
             disc=self.disc,
+            gaze_start = cfg['train_options']['gaze_start'],
             **cfg['train_options']['weights']
         )
         optim_options = cfg['train_options']['optim']

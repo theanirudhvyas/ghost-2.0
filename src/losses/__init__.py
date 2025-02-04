@@ -7,3 +7,4 @@ from .perceptual_vgg import PerceptualLoss
 from .psnr import PSNR
 from .lpips import LPIPS
 from .ssim import SSIM, MS_SSIM
+from .gaze import GazeLossRTGene
