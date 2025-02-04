@@ -3,6 +3,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
+from torch.nn.utils import spectral_norm
+
+import src.blocks as blocks
 
 class Discriminator(nn.Module):
     def __init__(self, padding='zero', in_channels=3, out_channels=3, num_channels=64, max_num_channels=512, embed_channels=512,

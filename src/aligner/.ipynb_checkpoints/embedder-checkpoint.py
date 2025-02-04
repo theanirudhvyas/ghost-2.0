@@ -1,11 +1,14 @@
 import torch
 import torch.nn as nn
+import torchvision
+import numpy as np
 import imgaug.augmenters as iaa
+from repos.arcface_model.iresnet import iresnet50
 
 class Embedder(nn.Module):
     def __init__(self, d_por, d_id, d_pose, d_exp):
         super().__init__()
-
+        
         self.d_por = d_por
         self.d_id = d_id
         self.d_pose = d_pose
@@ -74,42 +77,41 @@ class Embedder(nn.Module):
     
         
             if use_geometric_augmentations:
-                if imgaugs:
                     
-                    sometimes = lambda aug: iaa.Sometimes(0.5, aug)
-                    augs = [
-                        sometimes(iaa.Affine(
-                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        # scale images to 80-120% of their size, individually per axis
-                        order=[1],  # use  bilinear interpolation (fast)
-                        mode=["reflect"]
-                    )),
-                        sometimes(iaa.Affine(
-                        translate_percent={"x": (-0.05, 0.05), "y": (-0.05, 0.05)},
-                        order=[1],  # use bilinear interpolation (fast)
-                        mode=["reflect"]
-                    ))]
-                    
-                    augs = iaa.Sequential(augs)
-                    
-                    def tensor2image(img):
-                        img = img.cpu().permute(1, 2, 0)[:, :, [2, 1, 0]].numpy() * 0.5 + 0.5
-                        return (img * 255).astype(np.uint8)
-                    
-                    def image2tensor(img):
-                        img = (img / 255 - 0.5) / 0.5
-                        return torch.FloatTensor(img[:, :, [2, 1, 0]]).permute(2, 0, 1)
-    
-                    pic_pose_encoder = [tensor2image(img) for img in X_dict['target']['face_wide']]  
-                    pic_pose_encoder = augs(images = pic_pose_encoder)
-                    pic_pose_encoder = [image2tensor(img) for img in pic_pose_encoder]
-                    pic_pose_encoder = torch.stack(pic_pose_encoder, dim=0).to(X_dict['target']['face_wide'].device)
+                sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+                augs = [
+                    sometimes(iaa.Affine(
+                    scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                    # scale images to 80-120% of their size, individually per axis
+                    order=[1],  # use  bilinear interpolation (fast)
+                    mode=["reflect"]
+                )),
+                    sometimes(iaa.Affine(
+                    translate_percent={"x": (-0.05, 0.05), "y": (-0.05, 0.05)},
+                    order=[1],  # use bilinear interpolation (fast)
+                    mode=["reflect"]
+                ))]
+                
+                augs = iaa.Sequential(augs)
+                
+                def tensor2image(img):
+                    img = img.cpu().permute(1, 2, 0)[:, :, [2, 1, 0]].numpy() * 0.5 + 0.5
+                    return (img * 255).astype(np.uint8)
+                
+                def image2tensor(img):
+                    img = (img / 255 - 0.5) / 0.5
+                    return torch.FloatTensor(img[:, :, [2, 1, 0]]).permute(2, 0, 1)
 
-                else:
-                    height = torch.distributions.uniform.Uniform(0.8, 1.2).sample([1]).item() 
-                    width = torch.distributions.uniform.Uniform(0.8, 1.2).sample([1]).item()
-                    pic_pose_encoder = torch.nn.functional.interpolate(X_dict['target']['face_wide'], size=(int(512 * width), int(512*height)), mode='bicubic')
-                    pic_pose_encoder = self.transform_crop(pic_pose_encoder)
+                pic_pose_encoder = [tensor2image(img) for img in X_dict['target']['face_wide']]  
+                pic_pose_encoder = augs(images = pic_pose_encoder)
+                pic_pose_encoder = [image2tensor(img) for img in pic_pose_encoder]
+                pic_pose_encoder = torch.stack(pic_pose_encoder, dim=0).to(X_dict['target']['face_wide'].device)
+
+                # else:
+                #     height = torch.distributions.uniform.Uniform(0.8, 1.2).sample([1]).item() 
+                #     width = torch.distributions.uniform.Uniform(0.8, 1.2).sample([1]).item()
+                #     pic_pose_encoder = torch.nn.functional.interpolate(X_dict['target']['face_wide'], size=(int(512 * width), int(512*height)), mode='bicubic')
+                #     pic_pose_encoder = self.transform_crop(pic_pose_encoder)
     
             else:
                 pic_pose_encoder = X_dict['target']['face_wide']

@@ -1,12 +1,8 @@
 import os
-os.environ['HDF5_PLUGIN_PATH'] = '/home/jovyan/paramonov/HeadSwapNoRuns/h5_jpeg'
-import sys
+# os.environ['HDF5_PLUGIN_PATH'] = '/home/jovyan/paramonov/HeadSwapNoRuns/h5_jpeg'
 import torch
-from glob import glob
-# import h5py
+import yaml
 import numpy as np
-import copy
-
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import torchvision
@@ -14,35 +10,20 @@ import lightning.pytorch as pl
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import ToTensor
-from typing import Optional
-
-from skimage.io import imsave
-from torch.nn.utils import spectral_norm
-import blocks
-import math
-from collections import OrderedDict
-from torch.nn import Flatten
-import wandb
 from lightning.pytorch.loggers import TensorBoardLogger
-from itertools import chain
-from repos.arcface_model.iresnet import iresnet50 # iresnet100
-# from lightning.pytorch.utilities.seed import isolate_rng
-import torchvision.transforms.functional as TF
+
 from repos.stylematte.stylematte.models import StyleMatte
-import h5py
-from src.networks import DECACam, SharedMLP
+from src.data import Voxceleb2H5Dataset, CustomBatchSampler
+from src.utils.logging import LogPredictionSamplesCallback, PeriodicCheckpoint
+from src.utils.preprocess import make_X_dict, blend_alpha
+from src.losses import *
+from src.aligner import *
 
-from src.datasets import Voxceleb2H5DatasetCross, CustomBatchSamplerCross, HDFTH5Dataset
-from src.metrics import *
-
-from src.metrics.emotion_loss import EmotionLoss
-from src.datasets.dataset_self_emotion_iqa import Voxceleb2H5Dataset
-import yaml
     
 class AlignerLoss(nn.Module):
     def __init__(self, id_encoder, disc, w_rec=30, w_perc_vgg=1e-2, w_perc_id=2e-3, w_perc_disc=10, w_id=1e-2, w_adv=0.1, w_mask=1, w_emotion=1, w_kpt=30, w_gaze=1):
         super(AlignerLoss, self).__init__()
-        self.perc_vgg_loss = PerceptualLoss(1, './')
+        self.perc_vgg_loss = PerceptualLoss(1, './weights/')
         self.id_loss = ArcFaceLoss(id_encoder)
         self.disc = disc
         self.disc_loss = DiscriminatorLoss()
@@ -50,7 +31,7 @@ class AlignerLoss(nn.Module):
         self.emotion_loss = EmotionLoss()
         self.keypoint_loss = KeypointLoss(mode='expr')
 
-        self.weights = [w_rec, w_perc_vgg, w_perc_id, w_perc_disc, w_id, w_adv, w_mask, emotion, w_kpt]
+        self.weights = [w_rec, w_perc_vgg, w_perc_id, w_perc_disc, w_id, w_adv, w_mask, w_emotion, w_kpt]
 
         
     def forward(self, data_dict, X_dict, epoch):
@@ -59,8 +40,9 @@ class AlignerLoss(nn.Module):
         
         if 'face_wide_mask' in X_dict['target']:
             mask = X_dict['target']['face_wide_mask']
-            masked_fake = blend_alpha(masked_fake, mask)
-            masked_target = blend_alpha(masked_target, mask) 
+            
+            masked_fake = blend_alpha(masked_fake, mask.unsqueeze(1))
+            masked_target = blend_alpha(masked_target, mask.unsqueeze(1)) 
         
         
         L_rec = F.l1_loss(masked_fake, masked_target)
@@ -124,47 +106,29 @@ class AlignerLoss(nn.Module):
 
 
 class AlignerModule(pl.LightningModule):
-    def __init__(
-        self,
-        d_por=512,
-        d_id=512,
-        d_pose=256,
-        d_exp=256,
-        w_rec=30,
-        w_perc_vgg=1e-2,
-        w_perc_id=2e-3,
-        w_perc_disc=10,
-        w_id=1e-2,
-        w_adv=0.1,
-        w_mask=1,
-        g_lr=5e-5,
-        d_lr=2e-4,
-        g_clip=10,
-        d_clip=10,
-        betas=(0.9, 0.999),
-        segment=False
-    ):
+    def __init__(self, cfg):
         super(AlignerModule, self).__init__()
-        self.embedder = Embedder(*cfg.model)
-        self.gen = Generator(*cfg.model)
+        
+        self.embedder = Embedder(**cfg['model']['embeds'])
+        self.gen = Generator(**cfg['model']['embeds'])
         self.disc = Discriminator()
         self.aligner_loss = AlignerLoss(
             id_encoder=self.embedder.id_encoder,
             disc=self.disc,
-            **cfg.train_options.weights
+            **cfg['train_options']['weights']
         )
-        optim_options = cfg.train_options.optim
-        self.g_lr = optim_options.g_lr
-        self.d_lr = optim_options.d_lr
-        self.g_clip = optim_options.g_clip
-        self.d_clip = optim_options.d_clip
-        self.betas = (optim_options.beta1, optim_options.beta2)
+        optim_options = cfg['train_options']['optim']
+        self.g_lr = optim_options['g_lr']
+        self.d_lr = optim_options['d_lr']
+        self.g_clip = optim_options['g_clip']
+        self.d_clip = optim_options['d_clip']
+        self.betas = (optim_options['beta1'], optim_options['beta2'])
         self.segment_model = None
         self.automatic_optimization = False
         
         self.save_hyperparameters()
         
-        if segment:
+        if cfg['model']['segment']:
             self.segment_model = StyleMatte()
             self.segment_model.load_state_dict(
                 torch.load( '/home/jovyan/yaschenko/headswap/repos/stylematte/stylematte/checkpoints/drive-download-20230511T084109Z-001/stylematte_synth.pth',
@@ -179,8 +143,8 @@ class AlignerModule(pl.LightningModule):
         self.mssim = MS_SSIM()
         self.val_outputs = [[], []]
 
-    def forward(self, X_dict):
-        return self.gen(self.embedder(X_dict))
+    def forward(self, X_dict, use_geometric_augmentations=False):
+        return self.gen(self.embedder(X_dict, use_geometric_augmentations=use_geometric_augmentations))
 
     def configure_optimizers(self):
         
@@ -213,16 +177,16 @@ class AlignerModule(pl.LightningModule):
         X_dict = make_X_dict(
             X_arc=train_batch['face_arc'],
             X_wide=train_batch['face_wide'],
-            X_mask=train_batch['face_wide_mask'] if self.segment_model is not None else None
+            X_mask=train_batch['face_wide_mask'], # if self.segment_model is not None else None,
             X_emotion=train_batch['crop_emotion'],
             X_keypoints_source=None,
-            X_keypoints_target=train_batch['keypoints_t'],
+            X_keypoints_target=train_batch['keypoints_target'],
             segmentation=train_batch['segmentation']
         )
         
         opt_G, opt_D = self.optimizers()
         
-        data_dict = self.forward(X_dict)
+        data_dict = self.forward(X_dict, use_geometric_augmentations=True)
 
         losses = self.aligner_loss(data_dict, X_dict, epoch=self.current_epoch)
         
@@ -246,7 +210,6 @@ class AlignerModule(pl.LightningModule):
         return data_dict
 
     def validation_step(self, val_batch, batch_idx, dataloader_idx):
-            
         X_dict = make_X_dict(val_batch['face_arc'], val_batch['face_wide'],  val_batch['face_wide_mask'])
         
         with torch.no_grad():
@@ -254,7 +217,7 @@ class AlignerModule(pl.LightningModule):
         
         
         if dataloader_idx == 0:
-            masked_output = outputs['fake_rgbs'] * X_dict['target']['face_wide_mask']
+            masked_output = blend_alpha(outputs['fake_rgbs'], X_dict['target']['face_wide_mask'].unsqueeze(1))
             
             lpips_val = self.lpips(masked_output,  X_dict['target']['face_wide'])
             psnr_val = self.psnr(masked_output,  X_dict['target']['face_wide'])
@@ -275,9 +238,10 @@ class AlignerModule(pl.LightningModule):
             id_score = F.cosine_similarity(id_dict['fake_embeds'], id_dict['real_embeds']).mean()
             metrics = {'ID cross': id_score}
         
-        out_dict =  {'images': masked_output,
-                     'masks': outputs['fake_seg']
+        out_dict =  {'images': outputs['fake_rgbs'],
+                     'masks': outputs['fake_segm'],
                     'metrics': metrics}
+        
         if dataloader_idx == 0:
             self.val_outputs[0].append(out_dict)
         else:
@@ -317,9 +281,9 @@ class AlignerModule(pl.LightningModule):
 
 
 def create_dataset(cfg, train_transform=None, flip_transform=None, cross=False):
-    dataset = Voxceleb2H5Dataset(root_path=cfg.train_data_path, source_len=cfg.source_len, transform=train_transform, flip_transform=flip_transform, shuffle=cfg.shuffle, cross=cross)
+    dataset = Voxceleb2H5Dataset(root_path=cfg['data_path'], source_len=cfg['source_len'], transform=train_transform, flip_transform=flip_transform, shuffle=cfg['shuffle'], cross=cross)
     sampler = CustomBatchSampler(dataset)
-    dataloader = DataLoader(dataset, batch_size=cfg.batch_size, sampler=sampler, num_workers=cfg.num_workers)
+    dataloader = DataLoader(dataset, batch_size=cfg['batch_size'], sampler=sampler, num_workers=cfg['num_workers'])
     return dataloader
     
 
@@ -328,7 +292,7 @@ if __name__ == '__main__':
     with open('configs/aligner.yaml', "r") as stream:
         cfg = yaml.safe_load(stream)
     
-    model = AlignerModule(**cfg)
+    model = AlignerModule(cfg)
 
     train_transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -336,19 +300,19 @@ if __name__ == '__main__':
     ])
     flip_transform = torchvision.transforms.RandomHorizontalFlip()
 
-    train_dataloader = create_dataset(cfg.train_options, train_transform=train_transform, flip_transform=flip_transform, cross=False)
-    val_dataloader_self = create_dataset(cfg.inference_options, cross=False)
-    val_dataloader_cross = create_dataset(cfg.inference_options, cross=True)
+    train_dataloader = create_dataset(cfg['train_options'], train_transform=train_transform, flip_transform=flip_transform, cross=False)
+    val_dataloader_self = create_dataset(cfg['inference_options'], cross=False)
+    val_dataloader_cross = create_dataset(cfg['inference_options'], cross=True)
         
-    ts_logger = TensorBoardLogger('ts_logs/', name=cfg.experiment_name)
+    ts_logger = TensorBoardLogger('ts_logs/', name=cfg['experiment_name'])
     log_pred_callback = LogPredictionSamplesCallback(ts_logger)
-    checkpoint_callback = PeriodicCheckpoint(cfg.train_options.ckpt_interval, dir=f'{cfg.home_dir}/aligner_checkpoints/{experiment_name}/checkpoints')
+    checkpoint_callback = PeriodicCheckpoint(cfg['train_options']['ckpt_interval'], dir='{}/aligner_checkpoints/{}/checkpoints'.format(cfg['home_dir'], cfg['experiment_name']))
 
 
     trainer = pl.Trainer(
-        max_epochs=cfg.train_options.max_epochs,
-        accelerator='gpu', devices=cfg.num_gpus,
-        log_every_n_steps=cfg.train_options.log_interval,
+        max_epochs=cfg['train_options']['max_epochs'],
+        accelerator='gpu', devices=cfg['num_gpus'],
+        log_every_n_steps=cfg['train_options']['log_interval'],
         logger=ts_logger, callbacks=[checkpoint_callback, log_pred_callback],
         strategy='ddp_find_unused_parameters_true',
         precision=16

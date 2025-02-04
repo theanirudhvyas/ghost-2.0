@@ -27,6 +27,7 @@ def calc_arcface_borders(image_size=512):
 
 
 def blend_alpha(img, mask, background=None):
+    
     if background is None:
         background = torch.zeros_like(img)
         
@@ -45,16 +46,16 @@ def make_X_dict(X_arc, X_wide, X_mask=None, X_emotion=None, X_keypoints_source=N
     }
     
     if X_mask is not None:
-        X_dict['source']['face_wide_mask'] = X_mask[: ,:-1]
+        X_dict['source']['face_wide_mask'] = X_mask[: , :-1]
         X_dict['target']['face_wide_mask'] = X_mask[:, -1]
-        
+
         X_dict['source']['face_wide'] = blend_alpha(X_dict['source']['face_wide'],
             X_dict['source']['face_wide_mask']
         )
         
         X_dict['target']['face_wide'] = blend_alpha(
             X_dict['target']['face_wide'],
-            X_dict['target']['face_wide_mask']
+            X_dict['target']['face_wide_mask'].unsqueeze(1)
         )
 
     if segmentation is not None:

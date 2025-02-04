@@ -1,12 +1,13 @@
 home_dir: '/home/jovyan/yaschenko/clean_headswap/'
-experiment_name: 'dis_blocks_6_512_adv_w_0.11'
+experiment_name: 'test'
 num_gpus: 1
 
 model: 
-    d_por: 512
-    d_id: 512
-    d_pose: 256
-    d_exp: 0
+    embeds:
+        d_por: 512
+        d_id: 512
+        d_pose: 256
+        d_exp: 0
     segment: False
         
 train_options:
@@ -34,7 +35,7 @@ train_options:
     ckpt_interval: 20
     max_epochs: 1000
     log_interval: 250
-    batch_size: 20
+    batch_size: 10
     samples_cnt: None
     source_len: 1
     shuffle: True

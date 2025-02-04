@@ -1,7 +1,8 @@
 import os
+import numpy as np
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import ModelCheckpoint
-from preprocess import make_X_dict
+from .preprocess import make_X_dict
 
 class PeriodicCheckpoint(ModelCheckpoint):
     def __init__(self, every: int, dir: str):
@@ -70,7 +71,7 @@ class LogPredictionSamplesCallback(pl.Callback):
     def on_validation_batch_end(
         self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):                    
         if batch_idx == 0:
-            data = self.plot_images(pl_module, outputs['images']['fake_rgbs'], batch)
+            data = self.plot_images(pl_module, outputs['images'], batch)
             self.logger.experiment.add_image(f"Val samples {'self' if dataloader_idx == 0 else 'cross'}", data[::-1, :, :], trainer.global_step)
             
     def on_train_batch_end(

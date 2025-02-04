@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from src.utils.preprocess import calc_arcface_borders
 
 class ArcFaceLoss(nn.Module):
     def __init__(self, id_encoder, image_size=512):
