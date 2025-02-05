@@ -15,6 +15,7 @@ import torchvision
 from repos.emoca.gdl.datasets.ImageDatasetHelpers import bbox2point
 import pickle
 from torchvision.utils import make_grid
+import matplotlib.pyplot as plt
 
 def dict_factory():
     return defaultdict(dict)
@@ -28,7 +29,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         shuffle=False,
         transform=None,
         subset_size=None,
-        flip_transform=None,
+        flip_transform=False,
         return_masks=True, 
         image_size=512,
         cross=False
@@ -87,18 +88,24 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
             self.valid_idxs.append(idx)
     
     def get_sequence(self, video_tensor, seed, is_flip=False):
-        transform = self.flip_transform if is_flip else self.transform
-        to_tensor = (lambda x: x) if is_flip else self.to_tensor
-        rng_state = torch.get_rng_state()
-        torch.manual_seed(seed)
+        # rng_state = torch.get_rng_state()
+        # torch.manual_seed(seed)
         
         result = torch.stack([
-            transform(img) if i == (video_tensor.shape[0] - 1) else to_tensor(img)
+            self.transform(img) if i == (video_tensor.shape[0] - 1) else self.to_tensor(img)
             for i, img in enumerate(video_tensor[:])
         ])
         
-        torch.set_rng_state(rng_state)
+        # torch.set_rng_state(rng_state)
         return result
+
+    def flip(self, x, is_image=True):
+        if is_image:
+            x[-1] = torchvision.transforms.functional.hflip(x[-1])
+        else:
+            x[-1][..., 0] = 512 - x[-1][..., 0] #flip keypoints
+        return x
+            
     
     def __getitem__(self, idx):
         
@@ -167,15 +174,22 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         
         face_arc = self.get_sequence(face_arc, seed)
         face_wide = self.get_sequence(face_wide, seed)
-                    
-        if self.flip_transform is not None:
-            face_arc = self.get_sequence(face_arc, seed, is_flip=True)
-            face_wide = self.get_sequence(face_wide, seed, is_flip=True)
-            face_wide_mask = self.get_sequence(face_wide_mask, seed, is_flip=True)
-            segmentation = self.get_sequence(segmentation, seed, is_flip=True)
-            # face_keypoints = self.get_sequence(face_keypoints, seed, is_flip=True)
-            
+
         crop = self.crop_face(face_keypoints, face_wide, face_wide_mask)
+                    
+        # if self.flip_transform:
+        p = torch.rand(1)
+        print(p)
+        if p < 0.5:
+            face_arc = self.flip(face_arc)
+            face_wide = self.flip(face_wide)
+            face_wide_mask = self.flip(face_wide_mask)
+            segmentation = self.flip(segmentation)
+            crop = self.flip(crop)
+            print(face_keypoints.min(), face_keypoints.max())
+            face_keypoints = self.flip(face_keypoints, is_image=False)
+            
+        
 
 
         if self.image_size != 512:

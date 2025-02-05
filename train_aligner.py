@@ -320,9 +320,9 @@ if __name__ == '__main__':
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
-    flip_transform = torchvision.transforms.RandomHorizontalFlip()
+    # flip_transform = torchvision.transforms.RandomHorizontalFlip()
 
-    train_dataloader = create_dataset(cfg['train_options'], train_transform=train_transform, flip_transform=flip_transform, cross=False)
+    train_dataloader = create_dataset(cfg['train_options'], train_transform=train_transform, flip_transform=True, cross=False)
     val_dataloader_self = create_dataset(cfg['inference_options'], cross=False)
     val_dataloader_cross = create_dataset(cfg['inference_options'], cross=True)
         
