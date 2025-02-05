@@ -55,7 +55,7 @@ def make_X_dict(X_arc, X_wide, X_mask=None, X_emotion=None, X_keypoints_source=N
         
         X_dict['target']['face_wide'] = blend_alpha(
             X_dict['target']['face_wide'],
-            X_dict['target']['face_wide_mask'].unsqueeze(1)
+            X_dict['target']['face_wide_mask']
         )
 
     if segmentation is not None:

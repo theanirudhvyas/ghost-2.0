@@ -37,6 +37,7 @@ train_options:
     max_epochs: 1020
     gaze_start: 1000
     log_interval: 250
+    log_train_freq: 2
     batch_size: 10
     samples_cnt: None
     source_len: 1

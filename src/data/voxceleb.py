@@ -14,6 +14,7 @@ import torchvision.transforms.functional as TF
 import torchvision
 from repos.emoca.gdl.datasets.ImageDatasetHelpers import bbox2point
 import pickle
+from torchvision.utils import make_grid
 
 def dict_factory():
     return defaultdict(dict)
@@ -45,7 +46,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         with open('/home/jovyan/yaschenko/dev_masks_parsings/iqa_final_filtered_clip_0.2_hyper_60_sharp_0.3.pkl','rb') as f:
             h5_iqa = pickle.load(f)
     
-        self.h5_paths = sorted(list(h5_iqa.keys()))[:100]
+        self.h5_paths = sorted(list(h5_iqa.keys()))[:50]
         
         if shuffle:
             rng = random.Random(46)
@@ -111,7 +112,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
             idxs = idx_mask[np.sort(np.random.choice(len(idx_mask), size=self.source_len if self.cross else (self.source_len + 1), replace=False)).tolist()].tolist()
 
             if self.cross:
-                permutation = 0
+                permutation = [0]
             else:
                 target_idx = np.random.choice(len(idxs))
                 permutation = list(range(len(idxs)))
@@ -122,9 +123,9 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
             face_wide = f['face_wide'][idxs][permutation]
         
             if self.return_masks:
-                face_wide_mask = torch.stack([torch.tensor(x) for x in f['face_wide_mask'][idxs][permutation]])
+                face_wide_mask = torch.stack([TF.to_tensor(x) for x in f['face_wide_mask'][idxs][permutation]]) 
                 
-            segmentation = torch.stack([torch.tensor(x) for x in f['face_wide_parsing_segformer_B5_ce'][idxs][permutation]])
+            segmentation = torch.stack([TF.to_tensor(x) for x in f['face_wide_parsing_segformer_B5_ce'][idxs][permutation]])
             
             try:
                 face_keypoints = f['keypoints_68'][idxs][permutation]
@@ -144,15 +145,16 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
     
                 idxs_target = idx_mask_target[np.random.choice(len(idx_mask_target), size=1, replace=False).tolist()].tolist()
                 
-                face_arc = np.stack([face_arc, f_target['face_arc'][idxs_target][0]])
-                face_wide = np.stack([face_wide, f_target['face_wide'][idxs_target][0]])
+                face_arc = np.vstack([face_arc, f_target['face_arc'][idxs_target]])
+                face_wide = np.vstack([face_wide, f_target['face_wide'][idxs_target]])
             
                 if self.return_masks:
-                    face_wide_mask_target = torch.tensor(f_target['face_wide_mask'][idxs_target])
-                    face_wide_mask = np.stack([face_wide_mask, face_wide_mask_target[0]])
                     
-                segmentation_target = torch.tensor(f_target['face_wide_parsing_segformer_B5_ce'][idxs_target])
-                segmentation = np.stack([segmentation, segmentation_target[0]])
+                    face_wide_mask_target = TF.to_tensor(f_target['face_wide_mask'][idxs_target][0]).unsqueeze(0)
+                    face_wide_mask = torch.cat([face_wide_mask, face_wide_mask_target], 0)
+                    
+                segmentation_target =  TF.to_tensor(f_target['face_wide_parsing_segformer_B5_ce'][idxs_target][0]).unsqueeze(0)
+                segmentation = torch.cat([segmentation, segmentation_target], 0)
                 
                 try:
                     face_keypoints_target = f_target['keypoints_68'][idxs_target]
@@ -160,14 +162,12 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                     print(e)
                     print(h5_path_target)
                     face_keypoints_target = torch.zeros((seg_len_target, 68, 2), dtype=torch.int16)
-                face_keypoints = np.stack([face_keypoints, face_keypoints_target[0]])
-                    
-                
-
-            
+                face_keypoints = np.stack([face_keypoints, face_keypoints_target])
+        
+        
         face_arc = self.get_sequence(face_arc, seed)
         face_wide = self.get_sequence(face_wide, seed)
-
+                    
         if self.flip_transform is not None:
             face_arc = self.get_sequence(face_arc, seed, is_flip=True)
             face_wide = self.get_sequence(face_wide, seed, is_flip=True)
@@ -184,11 +184,11 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
             segmentation = torch.nn.functional.interpolate(segmentation, size=(self.image_size, self.image_size), mode='bilinear')
             face_keypoints = face_keypoints * (self.image_size // 512)
 
+        
         result = {
             'face_arc': face_arc,
             'face_wide': face_wide
         }
-        
         if self.return_masks:
             result['face_wide_mask'] = face_wide_mask
 

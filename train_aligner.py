@@ -1,5 +1,4 @@
 import os
-# os.environ['HDF5_PLUGIN_PATH'] = '/home/jovyan/paramonov/HeadSwapNoRuns/h5_jpeg'
 import torch
 import yaml
 import numpy as np
@@ -43,8 +42,8 @@ class AlignerLoss(nn.Module):
         if 'face_wide_mask' in X_dict['target']:
             mask = X_dict['target']['face_wide_mask']
             
-            masked_fake = blend_alpha(masked_fake, mask.unsqueeze(1))
-            masked_target = blend_alpha(masked_target, mask.unsqueeze(1)) 
+            masked_fake = blend_alpha(masked_fake, mask)
+            masked_target = blend_alpha(masked_target, mask) 
         
         
         L_rec = F.l1_loss(masked_fake, masked_target)
@@ -232,6 +231,7 @@ class AlignerModule(pl.LightningModule):
         return data_dict
 
     def validation_step(self, val_batch, batch_idx, dataloader_idx):
+
         X_dict = make_X_dict(val_batch['face_arc'], val_batch['face_wide'],  val_batch['face_wide_mask'])
         
         with torch.no_grad():
@@ -239,7 +239,7 @@ class AlignerModule(pl.LightningModule):
         
         
         if dataloader_idx == 0:
-            masked_output = blend_alpha(outputs['fake_rgbs'], X_dict['target']['face_wide_mask'].unsqueeze(1))
+            masked_output = blend_alpha(outputs['fake_rgbs'], X_dict['target']['face_wide_mask'])
             
             lpips_val = self.lpips(masked_output,  X_dict['target']['face_wide'])
             psnr_val = self.psnr(masked_output,  X_dict['target']['face_wide'])
@@ -260,9 +260,9 @@ class AlignerModule(pl.LightningModule):
             id_score = F.cosine_similarity(id_dict['fake_embeds'], id_dict['real_embeds']).mean()
             metrics = {'ID cross': id_score}
         
-        out_dict =  {'images': outputs['fake_rgbs'],
-                     'masks': outputs['fake_segm'],
-                    'metrics': metrics}
+        out_dict =  {'fake_rgbs': outputs['fake_rgbs'],
+                     'fake_segm': outputs['fake_segm'],
+                     'metrics': metrics}
         
         if dataloader_idx == 0:
             self.val_outputs[0].append(out_dict)
@@ -326,8 +326,8 @@ if __name__ == '__main__':
     val_dataloader_self = create_dataset(cfg['inference_options'], cross=False)
     val_dataloader_cross = create_dataset(cfg['inference_options'], cross=True)
         
-    ts_logger = TensorBoardLogger('ts_logs/', name=cfg['experiment_name'])
-    log_pred_callback = LogPredictionSamplesCallback(ts_logger)
+    ts_logger = TensorBoardLogger('ts_logs_aligner/', name=cfg['experiment_name'])
+    log_pred_callback = LogPredictionSamplesCallback(ts_logger, n=4, log_train_freq=cfg['train_options']['log_train_freq'])
     checkpoint_callback = PeriodicCheckpoint(cfg['train_options']['ckpt_interval'], dir='{}/aligner_checkpoints/{}/checkpoints'.format(cfg['home_dir'], cfg['experiment_name']))
 
 
@@ -341,4 +341,4 @@ if __name__ == '__main__':
         )
     torch.set_float32_matmul_precision('medium')
     
-    trainer.fit(model, train_dataloader, [val_dataloader_self, val_dataloader_cross])
+    trainer.fit(model, train_dataloader, [val_dataloader_self, val_dataloader_cross], ckpt_path = '/home/jovyan/yaschenko/headswap/HeSerAligner_keypoints/dis_block_6_512_adv_w_0.11/checkpoints/750-rtgene.ckpt')
