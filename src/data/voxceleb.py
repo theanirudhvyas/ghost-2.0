@@ -15,7 +15,6 @@ import torchvision
 from repos.emoca.gdl.datasets.ImageDatasetHelpers import bbox2point
 import pickle
 from torchvision.utils import make_grid
-import matplotlib.pyplot as plt
 
 def dict_factory():
     return defaultdict(dict)
@@ -88,16 +87,12 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
             self.valid_idxs.append(idx)
     
     def get_sequence(self, video_tensor, seed, is_flip=False):
-        # rng_state = torch.get_rng_state()
-        # torch.manual_seed(seed)
-        
         result = torch.stack([
             self.transform(img) if i == (video_tensor.shape[0] - 1) else self.to_tensor(img)
             for i, img in enumerate(video_tensor[:])
         ])
-        
-        # torch.set_rng_state(rng_state)
         return result
+        
 
     def flip(self, x, is_image=True):
         if is_image:
@@ -179,14 +174,12 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                     
         # if self.flip_transform:
         p = torch.rand(1)
-        print(p)
         if p < 0.5:
             face_arc = self.flip(face_arc)
             face_wide = self.flip(face_wide)
             face_wide_mask = self.flip(face_wide_mask)
             segmentation = self.flip(segmentation)
             crop = self.flip(crop)
-            print(face_keypoints.min(), face_keypoints.max())
             face_keypoints = self.flip(face_keypoints, is_image=False)
             
         
