@@ -19,3 +19,5 @@ torchmetrics==1.6.1
 transformers==4.48.2
 torchfile==0.1.0
 wandb==0.19.6
+insightface
+onnxruntime
