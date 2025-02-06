@@ -1,7 +1,7 @@
 import torch.nn as nn
 from pathlib import Path
 import os
-os.sys.path.append('/home/jovyan/yaschenko/headswap/repos/emoca')
+os.sys.path.append('./repos/emoca')
 from repos.emoca.gdl_apps.EmotionRecognition.utils.io import load_model, test
 import numpy as np
 import torchvision
@@ -11,7 +11,7 @@ from src.utils.crops import emoca_crop
 
 class EmotionLoss(nn.Module):
 
-    def __init__(self, path_to_models="/home/jovyan/yaschenko/headswap/repos/emoca/assets/EmotionRecognition/image_based_networks", model_name = "ResNet50"):
+    def __init__(self, path_to_models="./repos/emoca/assets/EmotionRecognition/image_based_networks", model_name = "ResNet50"):
         super().__init__()
         self.model = load_model(Path(path_to_models) / model_name)
         self.model.cuda()

@@ -154,7 +154,7 @@ class AlignerModule(pl.LightningModule):
         if cfg['model']['segment']:
             self.segment_model = StyleMatte()
             self.segment_model.load_state_dict(
-                torch.load( '/home/jovyan/yaschenko/headswap/repos/stylematte/stylematte/checkpoints/drive-download-20230511T084109Z-001/stylematte_synth.pth',
+                torch.load( './repos/stylematte/stylematte/checkpoints/drive-download-20230511T084109Z-001/stylematte_synth.pth',
                     map_location='cpu'
                 ))
             

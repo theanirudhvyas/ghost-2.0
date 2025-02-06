@@ -31,7 +31,7 @@ class GazeLossRTGene(nn.Module):
                  interpolate: bool = False,
                  layer_indices: tuple = (1, 6, 11, 18, 25),
                  weights: tuple = (0.03125, 0.0625, 0.125, 0.25, 1.0),
-                 project_dir: str = '/home/jovyan/yaschenko/clean_headswap',
+                 project_dir: str = '.',
                  ) -> None:
         super(GazeLossRTGene, self).__init__()
         self.len_features = len(layer_indices)

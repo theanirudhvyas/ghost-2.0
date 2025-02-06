@@ -17,7 +17,7 @@ class DECAKeypoints(nn.Module):
         super().__init__()
         self.device = device
         cfg = config.cfg
-        config.cfg.deca_dir = '/home/jovyan/yaschenko/headswap/repos/DECA/'
+        config.cfg.deca_dir = './repos/DECA/'
         
         cfg.model.topology_path = os.path.join(config.cfg.deca_dir, 'data', 'head_template.obj')
         cfg.model.addfiles_path = 'data'
@@ -36,8 +36,8 @@ class DECAKeypoints(nn.Module):
         self.deca.eval()
 
         self.front_net = BlazeFace().to(device)
-        self.front_net.load_weights("/home/jovyan/yaschenko/headswap/repos/BlazeFace_PyTorch/blazeface.pth")
-        self.front_net.load_anchors("/home/jovyan/yaschenko/headswap/repos/BlazeFace_PyTorch/anchors.npy")
+        self.front_net.load_weights("./repos/BlazeFace_PyTorch/blazeface.pth")
+        self.front_net.load_anchors("./repos/BlazeFace_PyTorch/anchors.npy")
         self.front_net.eval()
 
 

@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     deca = DECAKeypoints('cuda')
 
-    image = cv2.imread('/home/jovyan/yaschenko/headswap/examples/images/hab.jpg')
+    image = cv2.imread('./examples/images/hab.jpg')
 
     res_dict = preprocess_image(image, app, deca)
 
