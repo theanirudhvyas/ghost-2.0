@@ -176,3 +176,4 @@ ts_logs_aligner/
 repos/
 aligner_checkpoints/
 src/losses/gaze_models/
+*.png

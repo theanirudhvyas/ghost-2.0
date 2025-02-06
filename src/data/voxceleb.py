@@ -189,7 +189,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
             face_wide = torch.nn.functional.interpolate(face_wide, size=(self.image_size, self.image_size), mode='bilinear')
             face_wide_mask = torch.nn.functional.interpolate(face_wide_mask, size=(self.image_size, self.image_size), mode='bilinear')
             segmentation = torch.nn.functional.interpolate(segmentation, size=(self.image_size, self.image_size), mode='bilinear')
-            face_keypoints = face_keypoints * (self.image_size // 512)
+            # face_keypoints = face_keypoints * (self.image_size // 512)
 
         
         result = {

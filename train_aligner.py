@@ -66,12 +66,14 @@ class AlignerLoss(nn.Module):
             'fake_segm': data_dict['fake_segm'],
             'real_segm': X_dict['target']['face_wide_mask']
         })
-        
-        L_emotion = self.emotion_loss(masked_fake, X_dict['target']['crop_emotion'], X_dict['target']['keypoints'])
 
         
-        if epoch > 0:
-            L_kpt = self.keypoint_loss(masked_fake, masked_target)
+        if epoch >= 0:
+            input_kpts = (masked_fake[:, [2, 1, 0], :, :] / 2 + 0.5) * 255
+            L_kpt, cropped_images = self.keypoint_loss(input_kpts, X_dict['target']['keypoints'])
+
+            emotion_gt = X_dict['target']['crop_emotion'][:, [2, 1, 0], :, :] / 2 + 0.5
+            L_emotion = self.emotion_loss(cropped_images, emotion_gt, X_dict['target']['keypoints'])
 
 
         if epoch >= self.gaze_start:
@@ -337,8 +339,9 @@ if __name__ == '__main__':
         log_every_n_steps=cfg['train_options']['log_interval'],
         logger=ts_logger, callbacks=[checkpoint_callback, log_pred_callback],
         strategy='ddp_find_unused_parameters_true',
-        precision=16
+        precision=16,
+        num_sanity_val_steps=0
         )
     torch.set_float32_matmul_precision('medium')
     
-    trainer.fit(model, train_dataloader, [val_dataloader_self, val_dataloader_cross], ckpt_path = '/home/jovyan/yaschenko/headswap/HeSerAligner_keypoints/dis_block_6_512_adv_w_0.11/checkpoints/750-rtgene.ckpt')
+    trainer.fit(model, train_dataloader, [val_dataloader_self, val_dataloader_cross])#, ckpt_path = '/home/jovyan/yaschenko/headswap/HeSerAligner_keypoints/dis_block_6_512_adv_w_0.11/checkpoints/750-rtgene.ckpt')
