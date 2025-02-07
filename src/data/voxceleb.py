@@ -69,7 +69,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                     if self.return_masks:
                         assert 'face_wide_mask' in f
                     assert 'keypoints_68' in f
-                    assert 'idx_68' in f
+                    assert 'idx_68' in f and len(f['idx_68']) > self.source_len + 1
                     
             except Exception as e:
                 print(h5_path, e)

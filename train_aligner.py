@@ -163,7 +163,7 @@ class AlignerModule(pl.LightningModule):
         if cfg.model.segment:
             self.segment_model = StyleMatte()
             self.segment_model.load_state_dict(
-                torch.load( './repos/stylematte/stylematte/checkpoints/drive-download-20230511T084109Z-001/stylematte_synth.pth',
+                torch.load( './repos/stylematte/stylematte/checkpoints/stylematte_synth.pth',
                     map_location='cpu'
                 ))
             
@@ -340,7 +340,7 @@ if __name__ == '__main__':
     val_dataloader_cross = create_dataset(cfg.inference_options, cross=True)
         
     ts_logger = TensorBoardLogger('ts_logs_aligner/', name=cfg.experiment_name)
-    log_pred_callback = LogPredictionSamplesCallback(ts_logger, n=4, log_train_freq=cfg.train_options.log_train_freq)
+    log_pred_callback = LogPredictionSamplesCallback(ts_logger, n=2, log_train_freq=cfg.train_options.log_train_freq)
     checkpoint_callback = PeriodicCheckpoint(cfg.train_options.ckpt_interval, dir='{}/aligner_checkpoints/{}/checkpoints'.format(cfg.home_dir, cfg.experiment_name))
 
 

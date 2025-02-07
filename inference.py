@@ -29,7 +29,7 @@ def main(args):
     segment_model = StyleMatte()
     segment_model.load_state_dict(
         torch.load(
-            './repos/stylematte/stylematte/checkpoints/drive-download-20230511T084109Z-001/stylematte_synth.pth',
+            './repos/stylematte/stylematte/checkpoints/stylematte_synth.pth',
             map_location='cpu'
         )
     )

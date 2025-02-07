@@ -27,3 +27,6 @@ opencv-contrib-python==4.11.0.86
 opencv-python==4.11.0.86
 opencv-python-headless==4.11.0.86
 pillow==10.2.0
+scikit-video
+torchmetrics==0.6.2
+pytorch-lightning==1.4.9
