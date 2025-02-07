@@ -1,20 +1,19 @@
 import os
 os.environ['HDF5_PLUGIN_PATH'] = '/home/jovyan/paramonov/HeadSwapNoRuns/h5_jpeg'
-import sys
 import torch
-from glob import glob
-from collections import defaultdict
 import h5py
 import numpy as np
 import random
-from typing import Optional
 import torchvision
-from torchvision.transforms.functional import to_tensor, to_pil_image
 import torchvision.transforms.functional as TF
 import torchvision
+from typing import Optional
+from glob import glob
+from collections import defaultdict
+# from torchvision.utils import make_grid
+
 from repos.emoca.gdl.datasets.ImageDatasetHelpers import bbox2point
-import pickle
-from torchvision.utils import make_grid
+from src.utils.crops import emoca_crop
 
 def dict_factory():
     return defaultdict(dict)
@@ -43,10 +42,9 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         self.valid_idxs = []
         self.samples_cnt = samples_cnt
         
-        with open('/home/jovyan/yaschenko/dev_masks_parsings/iqa_final_filtered_clip_0.2_hyper_60_sharp_0.3.pkl','rb') as f:
-            h5_iqa = pickle.load(f)
+        self.h5_paths = sorted(glob(f'{root_path}/*/*/*.h5'))[:50]
     
-        self.h5_paths = sorted(list(h5_iqa.keys()))[:50]
+        # self.h5_paths = sorted(list(h5_iqa.keys()))[:50]
         
         if shuffle:
             rng = random.Random(46)
@@ -98,7 +96,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         if is_image:
             x[-1] = torchvision.transforms.functional.hflip(x[-1])
         else:
-            x[-1][..., 0] = 512 - x[-1][..., 0] #flip keypoints
+            x[-1][..., 0] = 224 - x[-1][..., 0] #flip keypoints
         return x
             
     
@@ -122,6 +120,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                 permutation.append(target_idx)
             
             face_arc = f['face_arc'][idxs][permutation]
+            # face_emoca = f['face_emoca'][idxs][permutation]
             face_wide = f['face_wide'][idxs][permutation]
         
             if self.return_masks:
@@ -148,6 +147,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                 idxs_target = idx_mask_target[np.random.choice(len(idx_mask_target), size=1, replace=False).tolist()].tolist()
                 
                 face_arc = np.vstack([face_arc, f_target['face_arc'][idxs_target]])
+                # face_emoca = np.vstack([face_emoca, f_target['face_emoca'][idxs_target]])
                 face_wide = np.vstack([face_wide, f_target['face_wide'][idxs_target]])
             
                 if self.return_masks:
@@ -168,64 +168,59 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         
         
         face_arc = self.get_sequence(face_arc, seed)
+        # face_emoca = self.get_sequence(face_emoca, seed)
         face_wide = self.get_sequence(face_wide, seed)
 
-        crop = self.crop_face(face_keypoints, face_wide, face_wide_mask)
+        # crop = self.crop_face(face_keypoints, face_wide, face_wide_mask)
+        crop = emoca_crop(face_wide*face_wide_mask, face_keypoints)
                     
-        # if self.flip_transform:
-        p = torch.rand(1)
-        if p < 0.5:
-            face_arc = self.flip(face_arc)
-            face_wide = self.flip(face_wide)
-            face_wide_mask = self.flip(face_wide_mask)
-            segmentation = self.flip(segmentation)
-            crop = self.flip(crop)
-            face_keypoints = self.flip(face_keypoints, is_image=False)
+        if self.flip_transform:
+            p = torch.rand(1)
+            if p < 0.5:
+                face_arc = self.flip(face_arc)
+                # face_emoca = self.flip(face_emoca)
+                face_wide = self.flip(face_wide)
+                face_wide_mask = self.flip(face_wide_mask)
+                segmentation = self.flip(segmentation)
+                crop = self.flip(crop)
+                face_keypoints = self.flip(face_keypoints, is_image=False)
             
-        
-
-
-        if self.image_size != 512:
-            face_wide = torch.nn.functional.interpolate(face_wide, size=(self.image_size, self.image_size), mode='bilinear')
-            face_wide_mask = torch.nn.functional.interpolate(face_wide_mask, size=(self.image_size, self.image_size), mode='bilinear')
-            segmentation = torch.nn.functional.interpolate(segmentation, size=(self.image_size, self.image_size), mode='bilinear')
-            # face_keypoints = face_keypoints * (self.image_size // 512)
-
         
         result = {
             'face_arc': face_arc,
+            # 'face_emoca': face_emoca,
             'face_wide': face_wide
         }
         if self.return_masks:
             result['face_wide_mask'] = face_wide_mask
 
-        result['crop_emotion'] = crop[0].to(torch.float16)#.unsqueeze(0)
-        result['keypoints_target'] = torch.tensor(face_keypoints[-1]).to(torch.int16)
+        result['face_emoca'] = crop.to(torch.float16)#.unsqueeze(0)
+        result['keypoints'] = torch.tensor(face_keypoints).to(torch.int16)
         result['segmentation'] = segmentation
         return result
 
-    def crop_face(self, face_keypoints, face_wide, face_wide_mask):
-        try:
-            scale = 1.25
-            left = np.min(face_keypoints[-1, :, 0])
-            right = np.max(face_keypoints[-1, :, 0])
-            top = np.min(face_keypoints[-1, :, 1])
-            bottom = np.max(face_keypoints[-1, :, 1])
-            old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
-            size = int(old_size * scale)
-            half = size // 2
-            new_left = int(center[0] - half)
-            new_right = int(center[0] + half)
-            new_top = int(center[1] - half)
-            new_bottom = int(center[1] + half)
+    # def crop_face(self, face_keypoints, face_wide, face_wide_mask):
+    #     try:
+    #         scale = 1.25
+    #         left = np.min(face_keypoints[:, :, 0])
+    #         right = np.max(face_keypoints[:, :, 0])
+    #         top = np.min(face_keypoints[:, :, 1])
+    #         bottom = np.max(face_keypoints[:, :, 1])
+    #         old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
+    #         size = int(old_size * scale)
+    #         half = size // 2
+    #         new_left = int(center[0] - half)
+    #         new_right = int(center[0] + half)
+    #         new_top = int(center[1] - half)
+    #         new_bottom = int(center[1] + half)
             
-            crop = TF.crop(face_wide[-1] * face_wide_mask[-1], new_top, new_left, (new_bottom - new_top), (new_right - new_left))
-            crop = torch.nn.functional.interpolate(crop.unsqueeze(0), size=((224, 224)), mode='bilinear')
-        except Exception as e:
-            print(e)
-            crop = torch.nn.functional.interpolate((face_wide[-1] * face_wide_mask[-1]).unsqueeze(0), size=((224, 224)), mode='bilinear')
+    #         crop = TF.crop(face_wide[-1] * face_wide_mask[-1], new_top, new_left, (new_bottom - new_top), (new_right - new_left))
+    #         crop = torch.nn.functional.interpolate(crop.unsqueeze(0), size=((224, 224)), mode='bilinear')
+    #     except Exception as e:
+    #         print(e)
+    #         crop = torch.nn.functional.interpolate((face_wide[-1] * face_wide_mask[-1]).unsqueeze(0), size=((224, 224)), mode='bilinear')
             
-        return crop
+    #     return crop
         
 
     def __len__(self):

@@ -1,12 +1,12 @@
 import torch
-import torch.nn as nn
 import torchvision
+import torch.nn as nn
 import numpy as np
 import imgaug.augmenters as iaa
-from repos.arcface_model.iresnet import iresnet50
+from src.aligner.iresnet import iresnet50
 
 class Embedder(nn.Module):
-    def __init__(self, d_por, d_id, d_pose, d_exp):
+    def __init__(self, d_por=512, d_id=512, d_pose=256, d_exp=0):
         super().__init__()
         
         self.d_por = d_por
@@ -18,7 +18,7 @@ class Embedder(nn.Module):
         self.por_encoder.fc = nn.Linear(2048, d_por)
         
         self.id_encoder = iresnet50(fp16=True)
-        self.id_encoder.load_state_dict(torch.load('./repos/arcface_model/backbone50_1.pth', map_location='cpu'))
+        self.id_encoder.load_state_dict(torch.load('./weights/backbone50_1.pth', map_location='cpu'))
         self.id_encoder.eval()
         for p in self.id_encoder.parameters():
             p.requires_grad = False

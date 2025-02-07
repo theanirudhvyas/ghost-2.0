@@ -10,17 +10,11 @@ import numpy as np
 
 from typing import Union
 from typing import Tuple, List
-# from torchvision.transforms.functional import to_pil_image
-# import torchvision
-# from .rt_gene_loss import RtGeneEstimator
-# from .rt_gene_loss import FaceBox
-
 
 from .rt_gene_loss_fb.gaze_tools import FaceBox
 from .rt_gene_loss_fb.rt_gene_estimator import RtGeneEstimator
 
-# from rt_gene import RtGeneEstimator
-# from rt_gene import FaceBox
+
 
 
 class GazeLossRTGene(nn.Module):

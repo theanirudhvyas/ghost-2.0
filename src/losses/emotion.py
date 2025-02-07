@@ -1,12 +1,13 @@
-import torch.nn as nn
-from pathlib import Path
-import os
-os.sys.path.append('./repos/emoca')
-from repos.emoca.gdl_apps.EmotionRecognition.utils.io import load_model, test
 import numpy as np
 import torchvision
 import torch
+import os
+import torch.nn as nn
+from pathlib import Path
 from torchvision.transforms.functional import to_pil_image
+os.sys.path.append('./repos/emoca')
+
+from repos.emoca.gdl_apps.EmotionRecognition.utils.io import load_model, test
 from src.utils.crops import emoca_crop
 
 class EmotionLoss(nn.Module):

@@ -1,15 +1,13 @@
+import os
+import torch
+import torchvision
+import numpy as np
 import torch.nn as nn
-from torchvision.transforms.functional import to_tensor, to_pil_image
+
 import repos.DECA.decalib.utils.config as config
 from repos.DECA.decalib.deca import DECA
 from repos.DECA.decalib.utils import util
-import torch
-import torchvision
-import os
-import PIL
-import numpy as np
 from repos.BlazeFace_PyTorch.blazeface import BlazeFace
-import matplotlib.pyplot as plt
 
 
 class DECAKeypoints(nn.Module):

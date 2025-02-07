@@ -5,6 +5,8 @@ import yaml
 from torchvision import transforms
 from PIL import Image
 from insightface.app import FaceAnalysis
+from omegaconf import OmegaConf
+
 from src.utils.crops import *
 from repos.stylematte.stylematte.models import StyleMatte
 from src.utils.inference import *
@@ -13,11 +15,11 @@ from train_aligner import AlignerModule
 def main(args):
 
     with open(args.config_a, "r") as stream:
-        cfg = yaml.safe_load(stream)
+        cfg = OmegaConf.load(stream)
 
     aligner = AlignerModule(cfg)
     ckpt = torch.load(args.ckpt_a, map_location='cpu')
-    aligner.load_state_dict(torch.load(args.ckpt_a)["state_dict"], strict=False)
+    aligner.load_state_dict(torch.load(args.ckpt_a), strict=False)
     aligner.eval()
     aligner.cuda()
 
@@ -97,7 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('--config_a', default='./configs/aligner.yaml', type=str, help='Path to Aligner config')
     parser.add_argument('--source', default='./examples/images/hab.jpg', type=str, help='Path to source image')
     parser.add_argument('--target', default='./examples/images/elon.jpg', type=str, help='Path to target image')
-    parser.add_argument('--ckpt_a', default='/home/jovyan/yaschenko/headswap/HeSerAligner_keypoints/final_models/dis_blocks_6_512_adv_w_0.1_rtgene_w1_ep1000/checkpoints/epoch-1020.ckpt', type=str, help='Aligner checkpoint')
+    parser.add_argument('--ckpt_a', default='/home/jovyan/yaschenko/clean_headswap/aligner_checkpoints/aligner_1020_gaze_final.ckpt', type=str, help='Aligner checkpoint')
     parser.add_argument('--save_path', default='result.png', type=str, help='Path to save the result')
     
     args = parser.parse_args()

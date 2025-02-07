@@ -1,15 +1,17 @@
 import os
 import torch
-import yaml
+import argparse
 import numpy as np
-from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
 import torchvision
-import lightning.pytorch as pl
 import torch.nn as nn
+import lightning.pytorch as pl
+import matplotlib.pyplot as plt
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
 from torchvision.transforms import ToTensor
 from lightning.pytorch.loggers import TensorBoardLogger
+from omegaconf import OmegaConf
+
 
 from repos.stylematte.stylematte.models import StyleMatte
 from src.data import Voxceleb2H5Dataset, CustomBatchSampler
@@ -70,9 +72,10 @@ class AlignerLoss(nn.Module):
         
         if epoch >= 0:
             input_kpts = (masked_fake[:, [2, 1, 0], :, :] / 2 + 0.5) * 255
-            L_kpt, cropped_images = self.keypoint_loss(input_kpts, X_dict['target']['keypoints'])
+            gt_kpts = (masked_fake[:, [2, 1, 0], :, :] / 2 + 0.5) * 255
+            L_kpt, cropped_images = self.keypoint_loss(input_kpts, X_dict['target']['keypoints'], gt_kpts)
 
-            emotion_gt = X_dict['target']['crop_emotion'][:, [2, 1, 0], :, :] / 2 + 0.5
+            emotion_gt = X_dict['target']['face_emoca'][:, [2, 1, 0], :, :] / 2 + 0.5
             L_emotion = self.emotion_loss(cropped_images, emotion_gt, X_dict['target']['keypoints'])
 
 
@@ -131,27 +134,31 @@ class AlignerModule(pl.LightningModule):
     def __init__(self, cfg):
         super(AlignerModule, self).__init__()
         
-        self.embedder = Embedder(**cfg['model']['embeds'])
-        self.gen = Generator(**cfg['model']['embeds'])
-        self.disc = Discriminator()
+        self.embedder = Embedder(**cfg.model.embed)
+        self.gen = Generator(d_por=cfg.model.embed.d_por,
+                             d_id=cfg.model.embed.d_id,
+                             d_pose=cfg.model.embed.d_pose,
+                             d_exp=cfg.model.embed.d_exp,
+                             **cfg.model.gen)
+        self.disc = Discriminator(**cfg.model.discr)
         self.aligner_loss = AlignerLoss(
             id_encoder=self.embedder.id_encoder,
             disc=self.disc,
-            gaze_start = cfg['train_options']['gaze_start'],
-            **cfg['train_options']['weights']
+            gaze_start = cfg.train_options.gaze_start,
+            **cfg.train_options.weights
         )
-        optim_options = cfg['train_options']['optim']
-        self.g_lr = optim_options['g_lr']
-        self.d_lr = optim_options['d_lr']
-        self.g_clip = optim_options['g_clip']
-        self.d_clip = optim_options['d_clip']
-        self.betas = (optim_options['beta1'], optim_options['beta2'])
+        optim_options = cfg.train_options.optim
+        self.g_lr = optim_options.g_lr
+        self.d_lr = optim_options.d_lr
+        self.g_clip = optim_options.g_clip
+        self.d_clip = optim_options.d_clip
+        self.betas = (optim_options.beta1, optim_options.beta2)
         self.segment_model = None
         self.automatic_optimization = False
         
         self.save_hyperparameters()
         
-        if cfg['model']['segment']:
+        if cfg.model.segment:
             self.segment_model = StyleMatte()
             self.segment_model.load_state_dict(
                 torch.load( './repos/stylematte/stylematte/checkpoints/drive-download-20230511T084109Z-001/stylematte_synth.pth',
@@ -201,9 +208,8 @@ class AlignerModule(pl.LightningModule):
             X_arc=train_batch['face_arc'],
             X_wide=train_batch['face_wide'],
             X_mask=train_batch['face_wide_mask'], # if self.segment_model is not None else None,
-            X_emotion=train_batch['crop_emotion'],
-            X_keypoints_source=None,
-            X_keypoints_target=train_batch['keypoints_target'],
+            X_emotion=train_batch['face_emoca'],
+            X_keypoints=train_batch['keypoints'],
             segmentation=train_batch['segmentation']
         )
         
@@ -305,16 +311,20 @@ class AlignerModule(pl.LightningModule):
 
 
 def create_dataset(cfg, train_transform=None, flip_transform=None, cross=False):
-    dataset = Voxceleb2H5Dataset(root_path=cfg['data_path'], source_len=cfg['source_len'], transform=train_transform, flip_transform=flip_transform, shuffle=cfg['shuffle'], cross=cross)
+    dataset = Voxceleb2H5Dataset(root_path=cfg.data_path, source_len=cfg.source_len, transform=train_transform, flip_transform=flip_transform, shuffle=cfg.shuffle, cross=cross)
     sampler = CustomBatchSampler(dataset)
-    dataloader = DataLoader(dataset, batch_size=cfg['batch_size'], sampler=sampler, num_workers=cfg['num_workers'])
+    dataloader = DataLoader(dataset, batch_size=cfg.batch_size, sampler=sampler, num_workers=cfg.num_workers)
     return dataloader
     
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default="./configs/aligner.yaml")
+    args = parser.parse_args()
     
-    with open('configs/aligner.yaml', "r") as stream:
-        cfg = yaml.safe_load(stream)
+    with open(args.config, "r") as stream:
+        cfg = OmegaConf.load(stream)
     
     model = AlignerModule(cfg)
 
@@ -322,26 +332,25 @@ if __name__ == '__main__':
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
-    # flip_transform = torchvision.transforms.RandomHorizontalFlip()
 
-    train_dataloader = create_dataset(cfg['train_options'], train_transform=train_transform, flip_transform=True, cross=False)
-    val_dataloader_self = create_dataset(cfg['inference_options'], cross=False)
-    val_dataloader_cross = create_dataset(cfg['inference_options'], cross=True)
+    train_dataloader = create_dataset(cfg.train_options, train_transform=train_transform, flip_transform=True, cross=False)
+    val_dataloader_self = create_dataset(cfg.inference_options, cross=False)
+    val_dataloader_cross = create_dataset(cfg.inference_options, cross=True)
         
-    ts_logger = TensorBoardLogger('ts_logs_aligner/', name=cfg['experiment_name'])
-    log_pred_callback = LogPredictionSamplesCallback(ts_logger, n=4, log_train_freq=cfg['train_options']['log_train_freq'])
-    checkpoint_callback = PeriodicCheckpoint(cfg['train_options']['ckpt_interval'], dir='{}/aligner_checkpoints/{}/checkpoints'.format(cfg['home_dir'], cfg['experiment_name']))
+    ts_logger = TensorBoardLogger('ts_logs_aligner/', name=cfg.experiment_name)
+    log_pred_callback = LogPredictionSamplesCallback(ts_logger, n=4, log_train_freq=cfg.train_options.log_train_freq)
+    checkpoint_callback = PeriodicCheckpoint(cfg.train_options.ckpt_interval, dir='{}/aligner_checkpoints/{}/checkpoints'.format(cfg.home_dir, cfg.experiment_name))
 
 
     trainer = pl.Trainer(
-        max_epochs=cfg['train_options']['max_epochs'],
-        accelerator='gpu', devices=cfg['num_gpus'],
-        log_every_n_steps=cfg['train_options']['log_interval'],
+        max_epochs=cfg.train_options.max_epochs,
+        accelerator='gpu', devices=cfg.num_gpus,
+        log_every_n_steps=cfg.train_options.log_interval,
         logger=ts_logger, callbacks=[checkpoint_callback, log_pred_callback],
         strategy='ddp_find_unused_parameters_true',
         precision=16,
-        num_sanity_val_steps=0
+        # num_sanity_val_steps=0
         )
     torch.set_float32_matmul_precision('medium')
     
-    trainer.fit(model, train_dataloader, [val_dataloader_self, val_dataloader_cross])#, ckpt_path = '/home/jovyan/yaschenko/headswap/HeSerAligner_keypoints/dis_block_6_512_adv_w_0.11/checkpoints/750-rtgene.ckpt')
+    trainer.fit(model, train_dataloader, [val_dataloader_self, val_dataloader_cross])#, ckpt_path = '/home/jovyan/yaschenko/clean_headswap/aligner_checkpoints/test/checkpoints/aligner_1020_gaze_final.ckpt')

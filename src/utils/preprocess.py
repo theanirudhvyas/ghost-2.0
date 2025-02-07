@@ -1,7 +1,6 @@
 import torch
-from skimage import transform as trans
 import numpy as np
-
+from skimage import transform as trans
 
 def calc_arcface_borders(image_size=512):
     src3 = np.array([[39.730, 51.138], [72.270, 51.138], [56.000, 68.493],
@@ -33,7 +32,7 @@ def blend_alpha(img, mask, background=None):
         
     return img * mask + background * (1 - mask)
     
-def make_X_dict(X_arc, X_wide, X_mask=None, X_emotion=None, X_keypoints_source=None, X_keypoints_target=None, segmentation=None):
+def make_X_dict(X_arc, X_wide, X_mask=None, X_emotion=None, X_keypoints=None, segmentation=None):
     X_dict = {
         'source': {
             'face_arc': X_arc[:, :-1],
@@ -63,12 +62,11 @@ def make_X_dict(X_arc, X_wide, X_mask=None, X_emotion=None, X_keypoints_source=N
         X_dict['target']['segmentation'] = segmentation[:, -1]
     
     if X_emotion is not None:
-        X_dict['target']['crop_emotion'] = X_emotion
-        
-    if X_keypoints_source is not None:
-        X_dict['source']['keypoints'] = X_keypoints_source
+        X_dict['source']['face_emoca'] = X_emotion[:, :-1] 
+        X_dict['target']['face_emoca'] = X_emotion[:, -1]    
 
-    if X_keypoints_target is not None:
-        X_dict['target']['keypoints'] = X_keypoints_target
+    if X_keypoints is not None:
+        X_dict['source']['keypoints'] = X_keypoints[:-1]
+        X_dict['target']['keypoints'] = X_keypoints[-1]
         
     return X_dict

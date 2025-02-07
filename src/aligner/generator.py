@@ -1,7 +1,7 @@
 #https://github.com/shrubb/latent-pose-reenactment/tree/master/embedders
+import math
 import torch
 import torch.nn as nn
-import math
 from torch.nn.utils import spectral_norm
 
 import src.blocks as blocks

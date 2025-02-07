@@ -2,8 +2,6 @@ import torch
 from torch import nn
 import lpips
 
-
-
 class LPIPS(nn.Module):
     def __init__(self):
         super(LPIPS, self).__init__()
@@ -24,7 +22,7 @@ class LPIPS(nn.Module):
                     delattr(m, name)
                     m.register_buffer(name, data, persistent=False)
 
-    # @torch.no_grad()
+    @torch.no_grad()
     def __call__(self, inputs, targets):
         return self.metric(self.transform(inputs), self.transform(targets), normalize=True).mean()
 

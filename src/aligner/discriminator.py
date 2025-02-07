@@ -1,11 +1,10 @@
 #https://github.com/shrubb/latent-pose-reenactment/tree/master/discriminators
 
 import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
-import math
 from torch.nn.utils import spectral_norm
-
 import src.blocks as blocks
 
 class Discriminator(nn.Module):

@@ -3,11 +3,31 @@ experiment_name: 'test'
 num_gpus: 1
 
 model: 
-    embeds:
+    embed:
         d_por: 512
         d_id: 512
         d_pose: 256
         d_exp: 0
+    discr:
+        padding: 'zero'
+        in_channels: 3
+        out_channels: 3
+        num_channels: 64
+        max_num_channels: 512
+        embed_channels: 512
+        dis_num_blocks: 6
+        image_size: 512
+        num_labels: 1
+    gen:
+        padding: 'zero'
+        in_channels: 3
+        out_channels: 3
+        num_channels: 64
+        max_num_channels: 512
+        norm_layer: 'in'
+        gen_constant_input_size: 4
+        gen_num_residual_blocks: 2
+        output_image_size: 512
     segment: False
         
 train_options:
@@ -23,7 +43,6 @@ train_options:
         w_gaze: 1
         w_kpt: 30
         w_emotion: 1
-        w_gaze: 1
 
     optim:
         g_lr: 0.0001

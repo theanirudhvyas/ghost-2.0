@@ -3,7 +3,6 @@ import numpy as np
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import ModelCheckpoint
 from .preprocess import make_X_dict
-from torchvision.transforms import ToTensor, ToPILImage
 
 class PeriodicCheckpoint(ModelCheckpoint):
     def __init__(self, every: int, dir: str):

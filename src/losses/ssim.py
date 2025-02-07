@@ -1,5 +1,5 @@
-from pytorch_msssim import ssim, ms_ssim
 import torch
+from pytorch_msssim import ssim, ms_ssim
 
 class SSIM(torch.nn.Module):
     def __call__(self, pred, gt):

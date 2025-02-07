@@ -1,5 +1,12 @@
 # GHOST-2.0
 
+## TODO
+- [ ] Blender code
+- [ ] Blender checkpoint
+- [ ] Complete instruction (project page)
+- [ ] Add blender to inference script ```inference.py```
+- [ ] Add segmentation model to preprocessing script ```preprocess_image.py```
+
 ```
 conda create -n ghost python=3.10
 pip install facenet_pytorch
@@ -13,7 +20,7 @@ pip install -r requirements.txt
 python -m pip uninstall numpy
 python -m pip install numpy==1.23.1
 ```
-Install the following into the ```repos``` folder:
+Install the following repositories into the ```repo``` folder:
 DECA
 EMOCA
 
@@ -33,3 +40,11 @@ python inference.py --source ./examples/images/hab.jpg --target ./examples/image
 -test
 ```
 2. Preprocess data according to the example in file ```preprocess_image.py```
+3. To train Aligner, run ```python train_aligner.py```
+
+## Citation
+
+## Acknowledgements
+This work utilizes code from the follwing repositories:
+[Neural Head Reenactment with Latent Pose Descriptors](https://github.com/shrubb/latent-pose-reenactment)
+[EMOPortraits: Emotion-enhanced Multimodal One-shot Head Avatars](https://github.com/neeek2303/EMOPortraits)

@@ -1,13 +1,12 @@
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils import spectral_norm
-import torch.nn.functional as F
 from functools import wraps
 from packaging import version
 from collections import namedtuple
 from torch import nn, einsum
-from einops import rearrange
-from einops import rearrange, reduce, repeat
+from einops import rearrange, repeat
 from functools import partial
 
 class AdaptiveNorm2d(nn.Module):

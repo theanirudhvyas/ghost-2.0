@@ -1,12 +1,8 @@
-import torch.nn as nn
-from torchvision.transforms.functional import to_tensor, to_pil_image
-import repos.DECA.decalib.utils.config as config
-from repos.DECA.decalib.deca import DECA
-from repos.DECA.decalib.utils import util
 import torch
 import torchvision
 import os
-from repos.BlazeFace_PyTorch.blazeface import BlazeFace
+import torch.nn as nn
+
 from src.utils.keypoint_detector import DECAKeypoints
 
 class KeypointLoss(nn.Module):
@@ -35,10 +31,14 @@ class KeypointLoss(nn.Module):
             self.register_buffer('upper_lips', torch.LongTensor([61, 62, 63]), persistent=False)
             self.register_buffer('lower_lips', torch.LongTensor([67, 66, 65]), persistent=False)
 
-    def forward(self, pred, landmarks2d_gt):
+    def forward(self, pred, landmarks2d_gt, gt):
+
+        #####
+        with torch.no_grad():
+            landmarks2d_gt, _ = self.detector(gt) 
         
         landmarks2d_pred, cropped_images = self.detector(pred) 
-        landmarks2d_gt = landmarks2d_gt / 224
+        landmarks2d_gt = landmarks2d_gt / 224 #normalize to [0, 1]
         landmarks2d_pred = landmarks2d_pred / 224
         
         if self.mode == 'all':
