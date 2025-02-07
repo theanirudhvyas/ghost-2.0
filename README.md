@@ -9,6 +9,7 @@
 
 ## Installation
 Clone repo with option ```--recurse-submodules```
+
 Install conda environment:
 ```
 conda create -n ghost python=3.10
@@ -25,7 +26,7 @@ pip install -r requirements.txt
 python -m pip uninstall numpy
 python -m pip install numpy==1.23.1
 ```
-Set up the following repositories in the ```repo``` folder:
+Set up the following repositories in the ```repos``` folder:
 [DECA](https://github.com/yfeng95/DECA)
 [EMOCA](https://github.com/radekd91/emoca)
 [BlazeFace](https://github.com/hollance/BlazeFace-PyTorch)
