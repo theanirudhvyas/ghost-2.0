@@ -31,7 +31,7 @@ Set up the following repositories in the ```repos``` folder:
 [BlazeFace](https://github.com/hollance/BlazeFace-PyTorch)
 [stylematte](https://github.com/chroneus/stylematte)
 
-For EMOCA, download pretrained models for emotion recognition as shown [here](https://github.com/radekd91/emoca/tree/release/EMOCA_v2/gdl_apps/EmotionRecognition)
+For EMOCA, download pretrained models for emotion recognition as shown [here](https://github.com/radekd91/emoca/tree/release/EMOCA_v2/gdl_apps/EmotionRecognition) and download checkpoint from [here](https://github.com/anastasia-yaschenko/emoca/releases/tag/resnet)
 
 Download the models from releases. Place them into the following folders
 ```
