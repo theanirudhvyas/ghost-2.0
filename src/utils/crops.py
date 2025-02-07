@@ -125,11 +125,11 @@ def emoca_crop(imgs, kpts):
     crop_list = []
     
     for i in range(imgs.size(0)):
-        try:
-            crop = torchvision.transforms.functional.crop(imgs[i], new_top[i], new_left[i], (new_bottom[i] - new_top[i]), (new_right[i] - new_left[i]))
-            crop = torch.nn.functional.interpolate(crop.unsqueeze(0), size=((224, 224)), mode='bilinear')
-        except:
-            crop = torch.nn.functional.interpolate(imgs[i].unsqueeze(0), size=((224, 224)), mode='bilinear')
+        # try:
+        crop = torchvision.transforms.functional.crop(imgs[i], new_top[i], new_left[i], (new_bottom[i] - new_top[i]), (new_right[i] - new_left[i]))
+        crop = torch.nn.functional.interpolate(crop.unsqueeze(0), size=((224, 224)), mode='bilinear')
+        # except:
+        #     crop = torch.nn.functional.interpolate(imgs[i].unsqueeze(0), size=((224, 224)), mode='bilinear')
         crop_list.append(crop)
         
     crop_list = torch.cat(crop_list, dim=0)

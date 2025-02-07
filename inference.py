@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser.add_argument('--config_a', default='./configs/aligner.yaml', type=str, help='Path to Aligner config')
     parser.add_argument('--source', default='./examples/images/hab.jpg', type=str, help='Path to source image')
     parser.add_argument('--target', default='./examples/images/elon.jpg', type=str, help='Path to target image')
-    parser.add_argument('--ckpt_a', default='/home/jovyan/yaschenko/clean_headswap/aligner_checkpoints/aligner_1020_gaze_final.ckpt', type=str, help='Aligner checkpoint')
+    parser.add_argument('--ckpt_a', default='./aligner_checkpoints/aligner_1020_gaze_final.ckpt', type=str, help='Aligner checkpoint')
     parser.add_argument('--save_path', default='result.png', type=str, help='Path to save the result')
     
     args = parser.parse_args()

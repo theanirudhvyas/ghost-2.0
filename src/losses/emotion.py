@@ -21,7 +21,7 @@ class EmotionLoss(nn.Module):
     def forward(self, pred, target, kpts):
         '''pred is RGB in range [0, 1]'''
         crop_list = emoca_crop(pred, kpts)
-            
+                
         batch = {'image': crop_list}
         output_pred = self.model(batch)['features']
         

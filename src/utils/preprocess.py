@@ -66,7 +66,7 @@ def make_X_dict(X_arc, X_wide, X_mask=None, X_emotion=None, X_keypoints=None, se
         X_dict['target']['face_emoca'] = X_emotion[:, -1]    
 
     if X_keypoints is not None:
-        X_dict['source']['keypoints'] = X_keypoints[:-1]
-        X_dict['target']['keypoints'] = X_keypoints[-1]
+        X_dict['source']['keypoints'] = X_keypoints[:, :-1]
+        X_dict['target']['keypoints'] = X_keypoints[:, -1]
         
     return X_dict

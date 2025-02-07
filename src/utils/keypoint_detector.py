@@ -9,7 +9,6 @@ from repos.DECA.decalib.deca import DECA
 from repos.DECA.decalib.utils import util
 from repos.BlazeFace_PyTorch.blazeface import BlazeFace
 
-
 class DECAKeypoints(nn.Module):
     def __init__(self, device='cuda'):
         super().__init__()
@@ -76,4 +75,4 @@ class DECAKeypoints(nn.Module):
         _, landmarks2d_pred, _ = self.deca.flame(shape_params=codedict['shape'], expression_params=codedict['exp'], pose_params=codedict['pose'])
         landmarks2d_pred = util.batch_orth_proj(landmarks2d_pred, codedict['cam'])[:,:,:2]; landmarks2d_pred[:,:,1:] = -landmarks2d_pred[:,:,1:]
         
-        return (landmarks2d_pred  / 2 + 0.5) * 224, cropped_imgs
+        return landmarks2d_pred  / 2 + 0.5

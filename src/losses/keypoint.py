@@ -31,15 +31,12 @@ class KeypointLoss(nn.Module):
             self.register_buffer('upper_lips', torch.LongTensor([61, 62, 63]), persistent=False)
             self.register_buffer('lower_lips', torch.LongTensor([67, 66, 65]), persistent=False)
 
-    def forward(self, pred, landmarks2d_gt, gt):
+    def forward(self, pred, gt):
 
-        #####
         with torch.no_grad():
-            landmarks2d_gt, _ = self.detector(gt) 
+            landmarks2d_gt = self.detector(gt) 
         
-        landmarks2d_pred, cropped_images = self.detector(pred) 
-        landmarks2d_gt = landmarks2d_gt / 224 #normalize to [0, 1]
-        landmarks2d_pred = landmarks2d_pred / 224
+        landmarks2d_pred = self.detector(pred) 
         
         if self.mode == 'all':
             diff = (landmarks2d_pred - landmarks2d_gt).abs().mean(-1)
@@ -56,4 +53,4 @@ class KeypointLoss(nn.Module):
             diff = (landmarks2d_gt[:, self.upper_lids] - landmarks2d_gt[:, self.lower_lids]).abs().mean(-1)
     
             loss_eyes = (diff_pred - diff).abs().mean()
-            return loss_eyes + loss_lips, cropped_images
+            return loss_eyes + loss_lips

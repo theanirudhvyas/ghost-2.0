@@ -7,8 +7,13 @@
 - [ ] Add blender to inference script ```inference.py```
 - [ ] Add segmentation model to preprocessing script ```preprocess_image.py```
 
+## Installation
+Clone repo with option ```--recurse-submodules```
+Install conda environment:
 ```
 conda create -n ghost python=3.10
+
+pip install face-alignment
 pip install facenet_pytorch
 
 conda config --add channels conda-forge
@@ -20,9 +25,25 @@ pip install -r requirements.txt
 python -m pip uninstall numpy
 python -m pip install numpy==1.23.1
 ```
-Install the following repositories into the ```repo``` folder:
-DECA
-EMOCA
+Set up the following repositories in the ```repo``` folder:
+[DECA](https://github.com/yfeng95/DECA)
+[EMOCA](https://github.com/radekd91/emoca)
+[BlazeFace](https://github.com/hollance/BlazeFace-PyTorch)
+[stylematte](https://github.com/chroneus/stylematte)
+
+Download the models from releases. Place them into the following folders
+```
+- aligner_checkpoints
+    - aligner_1020_gaze_final.ckpt
+
+- src
+    - losses
+        - gaze_models
+ 
+- weights
+    - backbone50_1.pth
+    - vgg19-d01eb7cb.pth
+```
 
 ## Inference
 For inference run

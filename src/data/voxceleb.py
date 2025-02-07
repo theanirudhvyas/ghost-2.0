@@ -10,10 +10,10 @@ import torchvision
 from typing import Optional
 from glob import glob
 from collections import defaultdict
-# from torchvision.utils import make_grid
 
 from repos.emoca.gdl.datasets.ImageDatasetHelpers import bbox2point
 from src.utils.crops import emoca_crop
+
 
 def dict_factory():
     return defaultdict(dict)
@@ -29,12 +29,10 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         subset_size=None,
         flip_transform=False,
         return_masks=True, 
-        image_size=512,
         cross=False
     ) -> None:
         self.root_path = root_path
         self.source_len = source_len
-        self.image_size = image_size
         self.cross = cross
         self.return_masks = return_masks
         self.flip_transform = flip_transform
@@ -42,10 +40,8 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         self.valid_idxs = []
         self.samples_cnt = samples_cnt
         
-        self.h5_paths = sorted(glob(f'{root_path}/*/*/*.h5'))[:50]
-    
-        # self.h5_paths = sorted(list(h5_iqa.keys()))[:50]
-        
+        self.h5_paths = sorted(glob(f'{root_path}/*/*/*.h5'))
+            
         if shuffle:
             rng = random.Random(46)
             rng.shuffle(self.h5_paths)
@@ -73,6 +69,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                     if self.return_masks:
                         assert 'face_wide_mask' in f
                     assert 'keypoints_68' in f
+                    assert 'idx_68' in f
                     
             except Exception as e:
                 print(h5_path, e)
@@ -81,7 +78,7 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
             if seg_len < (self.source_len + 1):
                 continue
             
-            self.h5_dict_tree[id][ref][h5_file] = {'idx': idx, 'seg_len': seg_len}
+            self.h5_dict_tree[id][ref][h5_file] = {'idx': len(self.valid_idxs), 'seg_len': seg_len}
             self.valid_idxs.append(idx)
     
     def get_sequence(self, video_tensor, seed, is_flip=False):
@@ -96,13 +93,13 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
         if is_image:
             x[-1] = torchvision.transforms.functional.hflip(x[-1])
         else:
-            x[-1][..., 0] = 224 - x[-1][..., 0] #flip keypoints
+            x[-1][..., 0] = 512 - x[-1][..., 0] #flip keypoints
         return x
             
     
     def __getitem__(self, idx):
         
-        h5_path = self.h5_paths[idx]
+        h5_path = self.h5_paths[self.valid_idxs[idx]]
         seed = torch.randint(0, 0x7fff_ffff_ffff_ffff, (1,))
         
         with h5py.File(h5_path) as f:
@@ -120,7 +117,6 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                 permutation.append(target_idx)
             
             face_arc = f['face_arc'][idxs][permutation]
-            # face_emoca = f['face_emoca'][idxs][permutation]
             face_wide = f['face_wide'][idxs][permutation]
         
             if self.return_masks:
@@ -133,12 +129,12 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
             except Exception as e:
                 print(e)
                 print(h5_path)
-                face_keypoints = torch.zeros((seg_len, 68, 2), dtype=torch.int16)
+                face_keypoints = torch.zeros((face_wide.shape[0], 68, 2), dtype=torch.int16)
 
         #get target additionally for cross reenactment
         if self.cross:
             idx_target = np.random.randint(0, self.__len__())
-            h5_path_target = self.h5_paths[idx_target]
+            h5_path_target = self.h5_paths[self.valid_idxs[idx_target]]
             
             with h5py.File(h5_path_target) as f_target:
                 seg_len_target = len(f_target['face_wide_mask'])
@@ -147,7 +143,6 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                 idxs_target = idx_mask_target[np.random.choice(len(idx_mask_target), size=1, replace=False).tolist()].tolist()
                 
                 face_arc = np.vstack([face_arc, f_target['face_arc'][idxs_target]])
-                # face_emoca = np.vstack([face_emoca, f_target['face_emoca'][idxs_target]])
                 face_wide = np.vstack([face_wide, f_target['face_wide'][idxs_target]])
             
                 if self.return_masks:
@@ -163,64 +158,36 @@ class Voxceleb2H5Dataset(torch.utils.data.Dataset):
                 except Exception as e:
                     print(e)
                     print(h5_path_target)
-                    face_keypoints_target = torch.zeros((seg_len_target, 68, 2), dtype=torch.int16)
+                    face_keypoints_target = torch.zeros((face_wide.shape[0], 68, 2), dtype=torch.int16)
                 face_keypoints = np.stack([face_keypoints, face_keypoints_target])
         
         
         face_arc = self.get_sequence(face_arc, seed)
-        # face_emoca = self.get_sequence(face_emoca, seed)
         face_wide = self.get_sequence(face_wide, seed)
 
-        # crop = self.crop_face(face_keypoints, face_wide, face_wide_mask)
-        crop = emoca_crop(face_wide*face_wide_mask, face_keypoints)
+        crop = emoca_crop(face_wide * face_wide_mask, face_keypoints)
                     
         if self.flip_transform:
             p = torch.rand(1)
             if p < 0.5:
                 face_arc = self.flip(face_arc)
-                # face_emoca = self.flip(face_emoca)
                 face_wide = self.flip(face_wide)
                 face_wide_mask = self.flip(face_wide_mask)
                 segmentation = self.flip(segmentation)
                 crop = self.flip(crop)
                 face_keypoints = self.flip(face_keypoints, is_image=False)
-            
         
         result = {
             'face_arc': face_arc,
-            # 'face_emoca': face_emoca,
             'face_wide': face_wide
         }
         if self.return_masks:
             result['face_wide_mask'] = face_wide_mask
 
-        result['face_emoca'] = crop.to(torch.float16)#.unsqueeze(0)
+        result['face_emoca'] = crop.to(torch.float16)
         result['keypoints'] = torch.tensor(face_keypoints).to(torch.int16)
         result['segmentation'] = segmentation
         return result
-
-    # def crop_face(self, face_keypoints, face_wide, face_wide_mask):
-    #     try:
-    #         scale = 1.25
-    #         left = np.min(face_keypoints[:, :, 0])
-    #         right = np.max(face_keypoints[:, :, 0])
-    #         top = np.min(face_keypoints[:, :, 1])
-    #         bottom = np.max(face_keypoints[:, :, 1])
-    #         old_size, center = bbox2point(left, right, top, bottom, type='kpt68')
-    #         size = int(old_size * scale)
-    #         half = size // 2
-    #         new_left = int(center[0] - half)
-    #         new_right = int(center[0] + half)
-    #         new_top = int(center[1] - half)
-    #         new_bottom = int(center[1] + half)
-            
-    #         crop = TF.crop(face_wide[-1] * face_wide_mask[-1], new_top, new_left, (new_bottom - new_top), (new_right - new_left))
-    #         crop = torch.nn.functional.interpolate(crop.unsqueeze(0), size=((224, 224)), mode='bilinear')
-    #     except Exception as e:
-    #         print(e)
-    #         crop = torch.nn.functional.interpolate((face_wide[-1] * face_wide_mask[-1]).unsqueeze(0), size=((224, 224)), mode='bilinear')
-            
-    #     return crop
         
 
     def __len__(self):
