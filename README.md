@@ -24,19 +24,21 @@ pip install -r requirements.txt
 python -m pip uninstall numpy
 python -m pip install numpy==1.23.1
 ```
-Set up the following repositories in the ```repos``` folder:
+Clone the following repositories in the ```repos``` folder. Download respective checkpoints:
 
 [DECA](https://github.com/yfeng95/DECA)
 [EMOCA](https://github.com/anastasia-yaschenko/EMOCA)
-[BlazeFace](https://github.com/hollance/BlazeFace-PyTorch)
+[BlazeFace](https://github.com/anastasia-yaschenko/BlazeFace_PyTorch)
 [stylematte](https://github.com/chroneus/stylematte)
 
-For EMOCA, download pretrained models for emotion recognition as shown [here](https://github.com/radekd91/emoca/tree/release/EMOCA_v2/gdl_apps/EmotionRecognition) and download checkpoint from [here](https://github.com/anastasia-yaschenko/emoca/releases/tag/resnet)
+For EMOCA, download assests folder from [here]() and unpack into ```repos/emoca```. Download ResNet50 folder from [here](https://github.com/anastasia-yaschenko/emoca/releases/tag/resnet) and unpack into ```repos/emoca/gdl_apps/EmotionRecognition/```
 
 Download the models from releases. Place them into the following folders
 ```
 - aligner_checkpoints
     - aligner_1020_gaze_final.ckpt
+- blender_checkpoints
+    - blender_lama.ckpt
 
 - src
     - losses
@@ -64,6 +66,7 @@ python inference.py --source ./examples/images/hab.jpg --target ./examples/image
 ```
 2. Preprocess data according to the example in file ```preprocess_image.py```
 3. To train Aligner, run ```python train_aligner.py```
+4. To train Blender, run ```python train_blender.py```
 
 ## Citation
 
