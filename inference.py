@@ -3,25 +3,40 @@ import torch
 import argparse
 import yaml
 from torchvision import transforms
+import onnxruntime as ort
 from PIL import Image
 from insightface.app import FaceAnalysis
 from omegaconf import OmegaConf
+from torchvision.transforms.functional import rgb_to_grayscale
 
 from src.utils.crops import *
 from repos.stylematte.stylematte.models import StyleMatte
 from src.utils.inference import *
+from src.utils.inpainter import LamaInpainter
+from src.utils.preblending import calc_pseudo_target_bg
 from train_aligner import AlignerModule
+from train_blender import BlenderModule
 
 def main(args):
 
     with open(args.config_a, "r") as stream:
-        cfg = OmegaConf.load(stream)
+        cfg_a = OmegaConf.load(stream)
 
-    aligner = AlignerModule(cfg)
+    with open(args.config_b, "r") as stream:
+        cfg_b = OmegaConf.load(stream)
+
+    aligner = AlignerModule(cfg_a)
     ckpt = torch.load(args.ckpt_a, map_location='cpu')
     aligner.load_state_dict(torch.load(args.ckpt_a), strict=False)
     aligner.eval()
     aligner.cuda()
+
+    blender = BlenderModule(cfg_b)
+    blender.load_state_dict(torch.load(args.ckpt_b, map_location='cpu')["state_dict"], strict=False,)
+    blender.eval()
+    blender.cuda()
+
+    inpainter = LamaInpainter()
 
     app = FaceAnalysis(providers=['CUDAExecutionProvider'], allowed_modules=['detection'])
     app.prepare(ctx_id=0, det_size=(640, 640))
@@ -35,6 +50,24 @@ def main(args):
     )
     segment_model = segment_model.cuda()
     segment_model.eval()
+
+    providers = [
+       ("CUDAExecutionProvider", {})
+    ]
+    parsings_session = ort.InferenceSession('/home/jovyan/paramonov/segmentation/models/segformer_B5_ce.onnx', providers=providers)
+    input_name = parsings_session.get_inputs()[0].name
+    output_names = [output.name for output in parsings_session.get_outputs()]
+    
+    mean = np.array([0.51315393, 0.48064056, 0.46301059])[None, :, None, None]
+    std = np.array([0.21438347, 0.20799829, 0.20304542])[None, :, None, None]
+    
+    infer_parsing = lambda img: torch.tensor(
+        parsings_session.run(output_names, {
+            input_name: (((img[:, [2, 1, 0], ...] / 2 + 0.5).cpu().detach().numpy() - mean) / std).astype(np.float32)
+        })[0],
+        device='cuda',
+        dtype=torch.float32
+    )
 
     def calc_mask(img):
         if isinstance(img, np.ndarray):
@@ -51,19 +84,24 @@ def main(args):
     
         return result[0]
 
-    def process_img(img_path):
+    def process_img(img_path, target=False):
         full_frames = cv2.imread(img_path)
         dets = app.get(full_frames)
         kps = dets[0]['kps']
-        wide = wide_crop_face(full_frames, kps)
+        wide = wide_crop_face(full_frames, kps, return_M=target)
+        if target:
+            wide, M = wide
         arc = norm_crop(full_frames, kps)
         mask = calc_mask(wide)
         arc = normalize_and_torch(arc)
         wide = normalize_and_torch(wide)
+        if target:
+            return wide, arc, mask, full_frames, M
         return wide, arc, mask
 
     wide_source, arc_source, mask_source = process_img(args.source)
-    wide_target, arc_target, mask_target = process_img(args.target)
+    wide_target, arc_target, mask_target, full_frame, M = process_img(args.target, target=True)
+    
 
     wide_source = wide_source.unsqueeze(1)
     arc_source = arc_source.unsqueeze(1)
@@ -86,11 +124,29 @@ def main(args):
     with torch.no_grad():
         output = aligner(X_dict)
 
-    mask_fake = calc_mask(output['fake_rgbs'][0] / 2 + 0.5)
-    fake = output['fake_rgbs'][0] * mask_fake
-    fake = fake.cpu().numpy().transpose((1, 2, 0))[:,:,::-1]
-    np_output = np.uint8((fake / 2 + 0.5)*255)
-    Image.fromarray(np_output).save(args.save_path)
+
+    target_parsing = infer_parsing(wide_target)
+    pseudo_norm_target = calc_pseudo_target_bg(wide_target, target_parsing)
+    soft_mask = calc_mask(((output['fake_rgbs'] * output['fake_segm'])[0, [2, 1, 0], :, :] + 1) / 2)[None]
+    new_source = output['fake_rgbs'] * soft_mask[:, None, ...] + pseudo_norm_target * (1 - soft_mask[:, None, ...])
+
+    blender_input = {
+        'face_source': new_source, # output['fake_rgbs']*output['fake_segm'] + norm_target*(1-output['fake_segm']),# face_source,
+        'gray_source': rgb_to_grayscale(new_source[0][[2, 1, 0], ...]).unsqueeze(0),
+        'face_target': wide_target,
+        'mask_source': infer_parsing(output['fake_rgbs']*output['fake_segm']),
+        'mask_target': target_parsing,
+        'mask_source_noise': None,
+        'mask_target_noise': None,
+        'alpha_source': soft_mask
+    }
+
+    output_b = blender(blender_input, inpainter=inpainter)
+
+    np_output = np.uint8((output_b['oup'][0].detach().cpu().numpy().transpose((1, 2, 0))[:,:,::-1] / 2 + 0.5)*255)
+    result = copy_head_back(np_output, full_frame[..., ::-1], M)
+    Image.fromarray(result).save(args.save_path)
+
     
 
 if __name__ == "__main__":
@@ -98,9 +154,11 @@ if __name__ == "__main__":
     
     # Generator params
     parser.add_argument('--config_a', default='./configs/aligner.yaml', type=str, help='Path to Aligner config')
+    parser.add_argument('--config_b', default='./configs/blender.yaml', type=str, help='Path to Blender config')
     parser.add_argument('--source', default='./examples/images/hab.jpg', type=str, help='Path to source image')
     parser.add_argument('--target', default='./examples/images/elon.jpg', type=str, help='Path to target image')
     parser.add_argument('--ckpt_a', default='./aligner_checkpoints/aligner_1020_gaze_final.ckpt', type=str, help='Aligner checkpoint')
+    parser.add_argument('--ckpt_b', default='./blender_checkpoints/blender_lama.ckpt', type=str, help='Blender checkpoint')
     parser.add_argument('--save_path', default='result.png', type=str, help='Path to save the result')
     
     args = parser.parse_args()
