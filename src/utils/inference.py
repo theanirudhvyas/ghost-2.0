@@ -53,7 +53,7 @@ def torch2image(torch_image: torch.tensor) -> np.ndarray:
         denorm_image = denorm_image.permute(1, 2, 0)
     
     np_image = denorm_image.detach().cpu().numpy()
-    np_image = np.clip(np_image*255., 0, 255).astype(np.uint8)
+    np_image = np.clip(np_image * 255., 0, 255).astype(np.uint8)
     
     if batch:
         return np.concatenate(np_image, axis=1)

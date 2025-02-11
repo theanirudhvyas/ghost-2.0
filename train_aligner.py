@@ -127,6 +127,9 @@ class AlignerLoss(nn.Module):
         }
         if epoch > 0:
             loss_dict['L_kpt'] = L_kpt
+
+        if epoch >= self.gaze_start:
+            loss_dict['L_gaze'] = L_gaze
             
         return loss_dict
     
@@ -259,10 +262,10 @@ class AlignerModule(pl.LightningModule):
             id_dict = self.aligner_loss.id_loss(outputs, X_dict, return_embeds=True)
             id_metric = F.cosine_similarity(id_dict['fake_embeds'], id_dict['real_embeds']).mean()
 
-            metrics = {'LPIPS':lpips_val,
-                           'PSNR':psnr_val,
-                           'SSIM':ssim_val,
-                           'MS_SSIM':mssim_val,
+            metrics = {'LPIPS': lpips_val,
+                           'PSNR': psnr_val,
+                           'SSIM': ssim_val,
+                           'MS_SSIM': mssim_val,
                            'ID self': id_metric}
             
         if dataloader_idx == 1:

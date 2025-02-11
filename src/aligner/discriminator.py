@@ -9,7 +9,7 @@ import src.blocks as blocks
 
 class Discriminator(nn.Module):
     def __init__(self, padding='zero', in_channels=3, out_channels=3, num_channels=64, max_num_channels=512, embed_channels=512,
-                 dis_num_blocks=(5 + 1), image_size=512,
+                 dis_num_blocks=6, image_size=512,
                  num_labels=1):
         super().__init__()
 

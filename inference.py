@@ -88,7 +88,8 @@ def main(args):
 
     mask_fake = calc_mask(output['fake_rgbs'][0] / 2 + 0.5)
     fake = output['fake_rgbs'][0] * mask_fake
-    np_output = np.uint8((fake.cpu().numpy().transpose((1, 2, 0))[:,:,::-1] / 2 + 0.5)*255)
+    fake = fake.cpu().numpy().transpose((1, 2, 0))[:,:,::-1]
+    np_output = np.uint8((fake / 2 + 0.5)*255)
     Image.fromarray(np_output).save(args.save_path)
     
 
