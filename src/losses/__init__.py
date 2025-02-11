@@ -8,3 +8,4 @@ from .psnr import PSNR
 from .lpips import LPIPS
 from .ssim import SSIM, MS_SSIM
 from .gaze import GazeLossRTGene
+from .reg_loss import ReferenceRegularizationLoss

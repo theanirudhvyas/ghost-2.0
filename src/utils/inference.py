@@ -76,3 +76,13 @@ def normalize_and_torch(image: np.ndarray, use_cuda = True) -> torch.tensor:
     image = (image - 0.5) / 0.5
 
     return image
+
+def copy_head_back(s, t, M):
+    mask = np.ones_like(s)
+    mask_tr = cv2.warpAffine(mask, cv2.invertAffineTransform(M), (t.shape[1], t.shape[0]), borderValue=0.0)
+    mask_tr = cv2.erode(mask_tr, np.ones((10, 10)))
+    mask_tr = cv2.GaussianBlur(mask_tr, (5, 5), 0)
+
+    image_tr = cv2.warpAffine(s, cv2.invertAffineTransform(M), (t.shape[1], t.shape[0]), borderValue=0.0)
+    res = (t * (1 - mask_tr) + image_tr * mask_tr).astype(np.uint8)
+    return res
