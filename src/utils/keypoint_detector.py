@@ -46,8 +46,8 @@ class DECAKeypoints(nn.Module):
         img_batch_128 = torch.nn.functional.interpolate(imgs, size=(128, 128))
         with torch.no_grad():
             front_detections = self.front_net.predict_on_batch(img_batch_128)
-            front_detections = [det.to(self.device) for det in front_detections]
             
+        front_detections = [det.to(self.device) for det in front_detections]    
         front_detections = torch.cat(front_detections, 0)
         front_detections = torch.stack([front_detections[:, 0] - 0.1, front_detections[:, 1] - 0.1, front_detections[:, 2] + 0.1, front_detections[:, 3] + 0.1], 1) 
 
@@ -76,4 +76,4 @@ class DECAKeypoints(nn.Module):
         _, landmarks2d_pred, _ = self.deca.flame(shape_params=codedict['shape'], expression_params=codedict['exp'], pose_params=codedict['pose'])
         landmarks2d_pred = util.batch_orth_proj(landmarks2d_pred, codedict['cam'])[:,:,:2]; landmarks2d_pred[:,:,1:] = -landmarks2d_pred[:,:,1:]
         
-        return landmarks2d_pred  / 2 + 0.5
+        return landmarks2d_pred  / 2 + 0.5 #normalize to [0, 1]

@@ -124,6 +124,7 @@ def main(args):
     with torch.no_grad():
         output = aligner(X_dict)
 
+
     target_parsing = infer_parsing(wide_target)
     pseudo_norm_target = calc_pseudo_target_bg(wide_target, target_parsing)
     soft_mask = calc_mask(((output['fake_rgbs'] * output['fake_segm'])[0, [2, 1, 0], :, :] + 1) / 2)[None]
@@ -146,7 +147,6 @@ def main(args):
     result = copy_head_back(np_output, full_frame[..., ::-1], M)
     Image.fromarray(result).save(args.save_path)
 
-    
     
 
 if __name__ == "__main__":

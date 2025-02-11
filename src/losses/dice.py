@@ -15,8 +15,8 @@ class DiceLoss(nn.Module):
         if len(real_segm.shape) > 4:
             real_segm = real_segm[:, 0]
 
-        numer = (2*fake_segm*real_segm).sum()
-        denom =  ((fake_segm**2).sum() + (real_segm**2).sum())
+        numer = (2 * fake_segm * real_segm).sum()
+        denom =  ((fake_segm ** 2).sum() + (real_segm ** 2).sum())
 
         dice = numer / denom
         loss = -torch.log(dice) 

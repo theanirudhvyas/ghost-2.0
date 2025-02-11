@@ -51,6 +51,6 @@ class KeypointLoss(nn.Module):
 
             diff_pred = (landmarks2d_pred[:, self.upper_lids] - landmarks2d_pred[:, self.lower_lids]).abs().mean(-1)
             diff = (landmarks2d_gt[:, self.upper_lids] - landmarks2d_gt[:, self.lower_lids]).abs().mean(-1)
-    
             loss_eyes = (diff_pred - diff).abs().mean()
+            
             return loss_eyes + loss_lips
