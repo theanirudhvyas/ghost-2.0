@@ -1,8 +1,6 @@
 # GHOST-2.0
 
 ## TODO
-- [ ] Blender code
-- [ ] Blender checkpoint
 - [ ] Complete instruction (project page)
 - [ ] Add blender to inference script ```inference.py```
 - [ ] Add segmentation model to preprocessing script ```preprocess_image.py```
@@ -31,7 +29,7 @@ Clone the following repositories in the ```repos``` folder. Download respective 
 [BlazeFace](https://github.com/anastasia-yaschenko/BlazeFace_PyTorch)
 [stylematte](https://github.com/chroneus/stylematte)
 
-For EMOCA, download assests folder from [here]() and unpack into ```repos/emoca```. Download ResNet50 folder from [here](https://github.com/anastasia-yaschenko/emoca/releases/tag/resnet) and unpack into ```repos/emoca/gdl_apps/EmotionRecognition/```
+For EMOCA, download ResNet50 folder from [here](https://github.com/anastasia-yaschenko/emoca/releases/tag/resnet) and unpack into ```repos/emoca/gdl_apps/EmotionRecognition/``` and ```assets/EmotionRecognition/image_based_networks/```
 
 Download the models from releases. Place them into the following folders
 ```
