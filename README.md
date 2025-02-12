@@ -45,6 +45,7 @@ Download the models from releases. Place them into the following folders
 - weights
     - backbone50_1.pth
     - vgg19-d01eb7cb.pth
+    - segformer_B5_ce.onnx
 ```
 
 ## Inference

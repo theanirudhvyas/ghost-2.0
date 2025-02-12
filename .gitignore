@@ -177,3 +177,5 @@ repos/
 aligner_checkpoints/
 src/losses/gaze_models/
 *.png
+blender_checkpoints/
+

@@ -54,7 +54,7 @@ def main(args):
     providers = [
        ("CUDAExecutionProvider", {})
     ]
-    parsings_session = ort.InferenceSession('/home/jovyan/paramonov/segmentation/models/segformer_B5_ce.onnx', providers=providers)
+    parsings_session = ort.InferenceSession('./weights/segformer_B5_ce.onnx', providers=providers)
     input_name = parsings_session.get_inputs()[0].name
     output_names = [output.name for output in parsings_session.get_outputs()]
     
