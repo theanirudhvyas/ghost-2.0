@@ -8,12 +8,14 @@ from PIL import Image
 from insightface.app import FaceAnalysis
 from omegaconf import OmegaConf
 from torchvision.transforms.functional import rgb_to_grayscale
+from diffusers import AutoPipelineForInpainting
+from diffusers.utils import load_image
 
 from src.utils.crops import *
 from repos.stylematte.stylematte.models import StyleMatte
 from src.utils.inference import *
 from src.utils.inpainter import LamaInpainter
-from src.utils.preblending import calc_pseudo_target_bg
+from src.utils.preblending import calc_pseudo_target_bg, post_inpainting
 from train_aligner import AlignerModule
 from train_blender import BlenderModule
 
@@ -40,6 +42,10 @@ def main(args):
 
     app = FaceAnalysis(providers=['CUDAExecutionProvider'], allowed_modules=['detection'])
     app.prepare(ctx_id=0, det_size=(640, 640))
+
+    if args.use_kandi:
+        pipe = AutoPipelineForInpainting.from_pretrained("kandinsky-community/kandinsky-2-2-decoder-inpaint", torch_dtype=torch.float16)
+        pipe.enable_model_cpu_offload()
 
     segment_model = StyleMatte()
     segment_model.load_state_dict(
@@ -100,7 +106,7 @@ def main(args):
         return wide, arc, mask
 
     wide_source, arc_source, mask_source = process_img(args.source)
-    wide_target, arc_target, mask_target, full_frame, M = process_img(args.target, target=True)
+    wide_target, arc_target, mask_target, full_frames, M = process_img(args.target, target=True)
     
 
     wide_source = wide_source.unsqueeze(1)
@@ -144,7 +150,9 @@ def main(args):
     output_b = blender(blender_input, inpainter=inpainter)
 
     np_output = np.uint8((output_b['oup'][0].detach().cpu().numpy().transpose((1, 2, 0))[:,:,::-1] / 2 + 0.5)*255)
-    result = copy_head_back(np_output, full_frame[..., ::-1], M)
+    result = copy_head_back(np_output, full_frames[..., ::-1], M)
+    if args.use_kandi:
+        result = post_inpainting(result, output, full_frames, M, infer_parsing, pipe)
     Image.fromarray(result).save(args.save_path)
 
     
@@ -157,6 +165,7 @@ if __name__ == "__main__":
     parser.add_argument('--config_b', default='./configs/blender.yaml', type=str, help='Path to Blender config')
     parser.add_argument('--source', default='./examples/images/hab.jpg', type=str, help='Path to source image')
     parser.add_argument('--target', default='./examples/images/elon.jpg', type=str, help='Path to target image')
+    parser.add_argument('--use_kandi',action='store_true', help='Usage post-blending step')
     parser.add_argument('--ckpt_a', default='./aligner_checkpoints/aligner_1020_gaze_final.ckpt', type=str, help='Aligner checkpoint')
     parser.add_argument('--ckpt_b', default='./blender_checkpoints/blender_lama.ckpt', type=str, help='Blender checkpoint')
     parser.add_argument('--save_path', default='result.png', type=str, help='Path to save the result')
