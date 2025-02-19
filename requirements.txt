@@ -21,3 +21,4 @@ onnx==1.17.0
 onnxruntime==1.20.1
 simple-lama-inpainting==0.1.2
 huggingface-hub==0.25.0
+diffusers==0.24.0
