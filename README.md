@@ -1,6 +1,7 @@
 # GHOST 2.0: Generative High-fidelity One Shot Transfer of Heads
 
-![](examples/teaser.jpg)
+![teaser](https://github.com/user-attachments/assets/60b35f78-99d6-4c4a-90b4-b694402c9e6c)
+
 
 We present GHOST 2.0, a novel approach for realistic head swapping. Our solution transfers head from source image to the target one in a natural way, seamessly blending with the target background and skin color. 
 
