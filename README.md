@@ -1,9 +1,10 @@
-# GHOST-2.0
+# GHOST 2.0: Generative High-fidelity One Shot Transfer of Heads
 
-## TODO
-- [ ] Complete instruction (project page)
-- [ ] Add blender to inference script ```inference.py```
-- [ ] Add segmentation model to preprocessing script ```preprocess_image.py```
+![](examples/teaser.jpg)
+
+We present GHOST 2.0, a novel approach for realistic head swapping. Our solution transfers head from source image to the target one in a natural way, seamessly blending with the target background and skin color. 
+
+While the task of face swapping has recently gained attention in the research community, a related problem of head swapping remains largely unexplored. In addition to skin color transfer, head swap poses extra challenges, such as the need to preserve structural information of the whole head during synthesis and inpaint gaps between swapped head and background. In this paper, we address these concerns with GHOST 2.0, which consists of two problem-specific modules. First, we introduce a new Aligner model for head reenactment, which preserves identity information at multiple scales and is robust to extreme pose variations. Secondly, we use a Blender module that seamlessly integrates the reenacted head into the target background by transferring skin color and inpainting mismatched regions. Both modules outperform the baselines on the corresponding tasks, allowing to achieve state-of-the-art results in head swapping. We also tackle complex cases, such as large difference in hair styles of source and driver. For more details on our solution, please refer to the paper.
 
 ## Installation
 Install conda environment:
@@ -25,8 +26,11 @@ python -m pip install numpy==1.23.1
 Clone the following repositories in the ```repos``` folder. Download respective checkpoints:
 
 [DECA](https://github.com/yfeng95/DECA)
+
 [EMOCA](https://github.com/anastasia-yaschenko/EMOCA)
+
 [BlazeFace](https://github.com/anastasia-yaschenko/BlazeFace_PyTorch)
+
 [stylematte](https://github.com/chroneus/stylematte)
 
 For EMOCA, download ResNet50 folder from [here](https://github.com/anastasia-yaschenko/emoca/releases/tag/resnet) and unpack into ```repos/emoca/gdl_apps/EmotionRecognition/``` and ```assets/EmotionRecognition/image_based_networks/```
@@ -71,5 +75,9 @@ python inference.py --source ./examples/images/hab.jpg --target ./examples/image
 
 ## Acknowledgements
 This work utilizes code from the follwing repositories:
+
 [Neural Head Reenactment with Latent Pose Descriptors](https://github.com/shrubb/latent-pose-reenactment)
+
 [EMOPortraits: Emotion-enhanced Multimodal One-shot Head Avatars](https://github.com/neeek2303/EMOPortraits)
+
+[RT-GENE: Real-Time Eye Gaze Estimation in Natural Environments](https://github.com/Tobias-Fischer/rt_gene?tab=readme-ov-file)
