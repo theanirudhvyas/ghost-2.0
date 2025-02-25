@@ -5,7 +5,7 @@
 
 We present GHOST 2.0, a novel approach for realistic head swapping. Our solution transfers head from source image to the target one in a natural way, seamessly blending with the target background and skin color. 
 
-While the task of face swapping has recently gained attention in the research community, a related problem of head swapping remains largely unexplored. In addition to skin color transfer, head swap poses extra challenges, such as the need to preserve structural information of the whole head during synthesis and inpaint gaps between swapped head and background. In this paper, we address these concerns with GHOST 2.0, which consists of two problem-specific modules. First, we introduce a new Aligner model for head reenactment, which preserves identity information at multiple scales and is robust to extreme pose variations. Secondly, we use a Blender module that seamlessly integrates the reenacted head into the target background by transferring skin color and inpainting mismatched regions. Both modules outperform the baselines on the corresponding tasks, allowing to achieve state-of-the-art results in head swapping. We also tackle complex cases, such as large difference in hair styles of source and driver. For more details on our solution, please refer to the paper.
+While the task of face swapping (see our [GHOST](https://github.com/ai-forever/ghost) model) has recently gained attention in the research community, a related problem of head swapping remains largely unexplored. In addition to skin color transfer, head swap poses extra challenges, such as the need to preserve structural information of the whole head during synthesis and inpaint gaps between swapped head and background. In this paper, we address these concerns with GHOST 2.0, which consists of two problem-specific modules. First, we introduce a new Aligner model for head reenactment, which preserves identity information at multiple scales and is robust to extreme pose variations. Secondly, we use a Blender module that seamlessly integrates the reenacted head into the target background by transferring skin color and inpainting mismatched regions. Both modules outperform the baselines on the corresponding tasks, allowing to achieve state-of-the-art results in head swapping. We also tackle complex cases, such as large difference in hair styles of source and driver. For more details on our solution, please refer to the paper.
 
 ## Installation
 Install conda environment:
@@ -73,6 +73,17 @@ python inference.py --source ./examples/images/hab.jpg --target ./examples/image
 4. To train Blender, run ```python train_blender.py```
 
 ## Citation
+
+## Ethics
+Deep fake synthesis methods have been improved a lot in quality in recent years. The research solutions were wrapped in easy-to-use API, software and different plugins for people with a little technical knowledge. As a result, almost anyone is able to make a deepfake image or video by just doing a short list of simple operations. At the same time, a lot of people with malicious intent are able to use this technology in order to produce harmful content. High distribution of such a content over the web leads to caution, disfavor and other negative feedback to deepfake synthesis or head swap research.
+
+As a group of researchers, we are not trying to denigrate celebrities and statesmen or to demean anyone. We are computer vision researchers, we are engineers, we are activists, we are hobbyists, we are human beings. To this end, we feel that it's time to come out with a standard statement of what this technology is and isn't as far as us researchers are concerned.
+
+GHOST 2.0 is not for creating inappropriate content.
+GHOST 2.0 is not for changing heads without consent or with the intent of hiding its use.
+GHOST 2.0 is not for any illicit, unethical, or questionable purposes.
+GHOST 2.0 exists to experiment and discover AI techniques, for social or political commentary, for movies, and for any number of ethical and reasonable uses.
+We are very troubled by the fact that GHOST 2.0 can be used for unethical and disreputable things. However, we support the development of tools and techniques that can be used ethically as well as provide education and experience in AI for anyone who wants to learn it hands-on. Now and further, we take a zero-tolerance approach and total disregard to anyone using this software for any unethical purposes and will actively discourage any such uses.
 
 ## Acknowledgements
 This work utilizes code from the follwing repositories:
