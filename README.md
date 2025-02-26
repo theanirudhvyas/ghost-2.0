@@ -56,7 +56,7 @@ Download the models from releases. Place them into the following folders
 ```
 
 ## Inference
-For inference run
+For inference use ```inference.ipynb``` or run
 ```
 python inference.py --source ./examples/images/hab.jpg --target ./examples/images/elon.jpg --save_path result.png
 ```
