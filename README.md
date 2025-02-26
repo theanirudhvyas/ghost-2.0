@@ -1,5 +1,7 @@
 # GHOST 2.0: Generative High-fidelity One Shot Transfer of Heads
 
+<a href='https://arxiv.org/abs/2502.18417'><img src='https://img.shields.io/badge/Paper-Arxiv-red'></a>        <a href='https://huggingface.co/spaces/ai-forever/GHOST-2.0'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-green'></a>
+
 ![teaser](https://github.com/user-attachments/assets/60b35f78-99d6-4c4a-90b4-b694402c9e6c)
 
 
