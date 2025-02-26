@@ -75,6 +75,18 @@ python inference.py --source ./examples/images/hab.jpg --target ./examples/image
 4. To train Blender, run ```python train_blender.py```
 
 ## Citation
+If you find our method useful in your research, please consider citing
+```
+@misc{groshev2025ghost20generativehighfidelity,
+      title={GHOST 2.0: generative high-fidelity one shot transfer of heads}, 
+      author={Alexander Groshev and Anastasiia Iashchenko and Pavel Paramonov and Denis Dimitrov and Andrey Kuznetsov},
+      year={2025},
+      eprint={2502.18417},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2502.18417}, 
+}
+```
 
 ## Ethics
 Deep fake synthesis methods have been improved a lot in quality in recent years. The research solutions were wrapped in easy-to-use API, software and different plugins for people with a little technical knowledge. As a result, almost anyone is able to make a deepfake image or video by just doing a short list of simple operations. At the same time, a lot of people with malicious intent are able to use this technology in order to produce harmful content. High distribution of such a content over the web leads to caution, disfavor and other negative feedback to deepfake synthesis or head swap research.
