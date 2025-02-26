@@ -77,7 +77,7 @@ python inference.py --source ./examples/images/hab.jpg --target ./examples/image
 ## Citation
 If you find our method useful in your research, please consider citing
 ```
-@misc{groshev2025ghost20generativehighfidelity,
+@misc{groshev2025ghost2
       title={GHOST 2.0: generative high-fidelity one shot transfer of heads}, 
       author={Alexander Groshev and Anastasiia Iashchenko and Pavel Paramonov and Denis Dimitrov and Andrey Kuznetsov},
       year={2025},
