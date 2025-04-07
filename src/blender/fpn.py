@@ -12,7 +12,18 @@ class FPN(nn.Module):
     ):
         super(FPN, self).__init__()
         
-        vgg19 = torchvision.models.vgg19(weights='IMAGENET1K_V1').features
+        # Handle different versions of torchvision.models.vgg19
+        try:
+            # For newer versions of torchvision
+            vgg19 = torchvision.models.vgg19(weights='IMAGENET1K_V1').features
+        except TypeError:
+            # For older versions of torchvision
+            try:
+                vgg19 = torchvision.models.vgg19(pretrained=True).features
+            except:
+                # Fallback for even newer versions
+                from torchvision.models import VGG19_Weights
+                vgg19 = torchvision.models.vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features
         encoder_layers = []
         for module in vgg19.children():
             if module.__class__.__name__ == 'MaxPool2d':
@@ -21,10 +32,20 @@ class FPN(nn.Module):
                 encoder_layers.append(module)
         self.encoder = nn.ModuleList(encoder_layers)
         self.layers_to_save = [0, 4, 9, 18, 27, 36]
-        self.decoder = torchvision.ops.FeaturePyramidNetwork(
-            in_channels_list=[64, 64, 128, 256, 512, 512],
-            out_channels=out_channels
-        )
+        # Handle different versions of torchvision.ops.FeaturePyramidNetwork
+        try:
+            self.decoder = torchvision.ops.FeaturePyramidNetwork(
+                in_channels_list=[64, 64, 128, 256, 512, 512],
+                out_channels=out_channels
+            )
+        except TypeError:
+            # For older versions of torchvision that require extra_blocks parameter
+            from torchvision.ops.feature_pyramid_network import LastLevelMaxPool
+            self.decoder = torchvision.ops.FeaturePyramidNetwork(
+                in_channels_list=[64, 64, 128, 256, 512, 512],
+                out_channels=out_channels,
+                extra_blocks=LastLevelMaxPool()
+            )
         self.out_layer=out_layer
         
     def preprocess_input(self, x):

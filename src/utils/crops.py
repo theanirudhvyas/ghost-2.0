@@ -2,9 +2,16 @@ import cv2
 import torch
 import torchvision
 import numpy as np
+import sys
+import os
 from skimage import transform as trans
 
-from repos.emoca.gdl.datasets.ImageDatasetHelpers import bbox2point
+# Add the repository to the Python path
+repo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'repos')
+sys.path.append(repo_path)
+
+# Now import from the EMOCA repository
+from EMOCA.gdl.datasets.ImageDatasetHelpers import bbox2point
 
 
 

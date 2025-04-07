@@ -5,27 +5,52 @@
 ![teaser](https://github.com/user-attachments/assets/60b35f78-99d6-4c4a-90b4-b694402c9e6c)
 
 
-We present GHOST 2.0, a novel approach for realistic head swapping. Our solution transfers head from source image to the target one in a natural way, seamessly blending with the target background and skin color. 
+We present GHOST 2.0, a novel approach for realistic head swapping. Our solution transfers head from source image to the target one in a natural way, seamessly blending with the target background and skin color.
 
 While the task of face swapping (see our [GHOST](https://github.com/ai-forever/ghost) model) has recently gained attention in the research community, a related problem of head swapping remains largely unexplored. In addition to skin color transfer, head swap poses extra challenges, such as the need to preserve structural information of the whole head during synthesis and inpaint gaps between swapped head and background. We address these concerns with GHOST 2.0, which consists of two problem-specific modules. First, we introduce a new Aligner model for head reenactment, which preserves identity information at multiple scales and is robust to extreme pose variations. Secondly, we use a Blender module that seamlessly integrates the reenacted head into the target background by transferring skin color and inpainting mismatched regions. Both modules outperform the baselines on the corresponding tasks, allowing to achieve state-of-the-art results in head swapping. We also tackle complex cases, such as large difference in hair styles of source and driver. For more details on our solution, please refer to the paper.
 
 ## Installation
-Install conda environment:
+
+### Environment Setup
+
+1. Create a new conda environment with Python 3.10:
+```bash
+conda create -n ghost-new python=3.10
+conda activate ghost-new
 ```
-conda create -n ghost python=3.10
 
-pip install face-alignment
-pip install facenet_pytorch
+2. Install PyTorch and other core dependencies:
+```bash
+# Install PyTorch with CUDA support (if available)
+pip install torch==2.2.2 torchvision==0.17.2
 
+# Install face detection and alignment libraries
+pip install face-alignment>=1.3.5
+pip install facenet_pytorch>=2.5.2
+pip install insightface==0.7.3
+```
+
+3. Install 3D modeling dependencies:
+```bash
+# Add conda-forge channel for pytorch3d
 conda config --add channels conda-forge
 conda config --set channel_priority strict
 pip install -U 'git+https://github.com/facebookresearch/fvcore'
 conda install pytorch3d -c pytorch3d-nightly
-
-pip install -r requirements.txt
-python -m pip uninstall numpy
-python -m pip install numpy==1.23.1
 ```
+
+4. Install all other required packages:
+```bash
+# Install from requirements.txt
+pip install -r requirements.txt
+
+# Important: Some packages require numpy<2.0.0
+python -m pip install numpy==1.26.4
+```
+
+### Important Notes
+- If you encounter NumPy version conflicts, make sure to use a version below 2.0.0 as some packages are not compatible with NumPy 2.x
+- If you encounter CUDA compatibility issues, try using CPU execution by modifying the providers in the code
 Clone the following repositories in the ```repos``` folder. Download respective checkpoints:
 
 [DECA](https://github.com/yfeng95/DECA)
@@ -48,7 +73,7 @@ Download the models from releases. Place them into the following folders
 - src
     - losses
         - gaze_models
- 
+
 - weights
     - backbone50_1.pth
     - vgg19-d01eb7cb.pth
@@ -56,10 +81,32 @@ Download the models from releases. Place them into the following folders
 ```
 
 ## Inference
-For inference use ```inference.ipynb``` or run
-```
+
+### Running the Model
+For inference, you can either use the Jupyter notebook ```inference.ipynb``` or run the Python script directly:
+
+```bash
+# Using the provided script
+./run_inference.sh
+
+# Or run directly with Python
 python inference.py --source ./examples/images/hab.jpg --target ./examples/images/elon.jpg --save_path result.png
 ```
+
+### Troubleshooting
+If you encounter any dependency issues during inference:
+
+1. Check that all required packages are installed:
+```bash
+pip install -r requirements.txt
+```
+
+2. Some specific packages that might need manual installation:
+```bash
+pip install transformers simple-lama-inpainting lightning
+```
+
+3. If you encounter CUDA errors, the code will automatically fall back to CPU execution
 
 ## Training
 1. Download VoxCeleb2. We expect the following structure of data directory and assume images are stored in BGR format:
@@ -78,13 +125,13 @@ python inference.py --source ./examples/images/hab.jpg --target ./examples/image
 If you find our method useful in your research, please consider citing
 ```
 @misc{groshev2025ghost2
-      title={GHOST 2.0: generative high-fidelity one shot transfer of heads}, 
+      title={GHOST 2.0: generative high-fidelity one shot transfer of heads},
       author={Alexander Groshev and Anastasiia Iashchenko and Pavel Paramonov and Denis Dimitrov and Andrey Kuznetsov},
       year={2025},
       eprint={2502.18417},
       archivePrefix={arXiv},
       primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2502.18417}, 
+      url={https://arxiv.org/abs/2502.18417},
 }
 ```
 
